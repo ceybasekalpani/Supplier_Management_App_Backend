@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="TeaFactorySupplierManagement.API/TeaFactorySupplierManagement.API.csproj" />
+  <Project Path="TeaFactorySupplierManagement.Application/TeaFactorySupplierManagement.Application.csproj" />
+  <Project Path="TeaFactorySupplierManagement.Domain/TeaFactorySupplierManagement.Domain.csproj" />
+  <Project Path="TeaFactorySupplierManagement.Infrastructure/TeaFactorySupplierManagement.Infrastructure.csproj" />
+</Solution>
