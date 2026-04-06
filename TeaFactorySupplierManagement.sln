@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeaFactorySupplierManagement.Domain", "TeaFactorySupplierManagement.Domain\TeaFactorySupplierManagement.Domain.csproj", "{4C5690A4-B81F-4344-99A8-78C21F5594D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeaFactorySupplierManagement.Infrastructure", "TeaFactorySupplierManagement.Infrastructure\TeaFactorySupplierManagement.Infrastructure.csproj", "{AC121CB6-9A76-4C82-9226-6983AA39F7F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeaFactorySupplierManagement.Application", "TeaFactorySupplierManagement.Application\TeaFactorySupplierManagement.Application.csproj", "{B2C38AEF-3A95-42C8-8217-32884AAF3C1E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeaFactorySupplierManagement.API", "TeaFactorySupplierManagement.API\TeaFactorySupplierManagement.API.csproj", "{3C83B232-6936-4FE2-AC9D-F527BC46B45A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4C5690A4-B81F-4344-99A8-78C21F5594D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C5690A4-B81F-4344-99A8-78C21F5594D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C5690A4-B81F-4344-99A8-78C21F5594D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C5690A4-B81F-4344-99A8-78C21F5594D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC121CB6-9A76-4C82-9226-6983AA39F7F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC121CB6-9A76-4C82-9226-6983AA39F7F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC121CB6-9A76-4C82-9226-6983AA39F7F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC121CB6-9A76-4C82-9226-6983AA39F7F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C38AEF-3A95-42C8-8217-32884AAF3C1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C38AEF-3A95-42C8-8217-32884AAF3C1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C38AEF-3A95-42C8-8217-32884AAF3C1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C38AEF-3A95-42C8-8217-32884AAF3C1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C83B232-6936-4FE2-AC9D-F527BC46B45A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C83B232-6936-4FE2-AC9D-F527BC46B45A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C83B232-6936-4FE2-AC9D-F527BC46B45A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C83B232-6936-4FE2-AC9D-F527BC46B45A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

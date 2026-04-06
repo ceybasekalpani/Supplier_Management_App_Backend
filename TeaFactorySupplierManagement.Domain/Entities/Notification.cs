@@ -27,8 +27,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public DateTime? EndDate { get; set; }
 
-        [MaxLength(50)]
-        public string? TargetRegNo { get; set; }
+        public int? TargetRegNo { get; set; }
 
         [Required]
         [MaxLength(100)]

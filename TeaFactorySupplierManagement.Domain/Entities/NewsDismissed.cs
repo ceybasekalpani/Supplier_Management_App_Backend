@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TeaFactorySupplierManagement.Domain.Entities
@@ -7,13 +6,12 @@ namespace TeaFactorySupplierManagement.Domain.Entities
     [Table("Supplier_Management_News_Dismissed")]
     public class NewsDismissed
     {
+        // Remove [Key] attributes - configure in Fluent API instead
         public int NewsId { get; set; }
+        public int RegNo { get; set; }
+        public DateTime DismissedAt { get; set; }
 
-        [MaxLength(50)]
-        public string RegNo { get; set; } = string.Empty;
-
-        public DateTime DismissedAt { get; set; } = DateTime.UtcNow;
-
+        // Navigation properties
         [ForeignKey("NewsId")]
         public virtual News? News { get; set; }
 

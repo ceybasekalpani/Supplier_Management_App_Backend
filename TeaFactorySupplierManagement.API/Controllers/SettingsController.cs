@@ -17,80 +17,90 @@ namespace TeaFactorySupplierManagement.API.Controllers
             _settingsService = settingsService;
         }
 
+        private int? GetCurrentRegNo()
+        {
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
+            {
+                return null;
+            }
+            return regNo;
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetSettings()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var settings = await _settingsService.GetSettingsByRegNoAsync(regNo);
+            var settings = await _settingsService.GetSettingsByRegNoAsync(regNo.Value);
             return Ok(settings ?? new UserSettingsDto());
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateSettings([FromBody] UpdateSettingsDto settings)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var result = await _settingsService.CreateOrUpdateSettingsAsync(regNo, settings);
+            var result = await _settingsService.CreateOrUpdateSettingsAsync(regNo.Value, settings);
             return Ok(result);
         }
 
         [HttpPut("profile-image")]
         public async Task<IActionResult> UpdateProfileImage([FromBody] UpdateProfileImageDto request)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var result = await _settingsService.UpdateProfileImageAsync(regNo, request.ProfileImage);
+            var result = await _settingsService.UpdateProfileImageAsync(regNo.Value, request.ProfileImage);
             return Ok(new { success = result });
         }
 
         [HttpPut("account-details")]
         public async Task<IActionResult> UpdateAccountDetails([FromBody] UpdateSettingsDto accountDetails)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var result = await _settingsService.UpdateAccountDetailsAsync(regNo, accountDetails);
+            var result = await _settingsService.UpdateAccountDetailsAsync(regNo.Value, accountDetails);
             return Ok(new { success = result });
         }
 
         [HttpPut("theme")]
         public async Task<IActionResult> UpdateTheme([FromBody] UpdateThemeRequest request)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var result = await _settingsService.UpdateThemeAsync(regNo, request.Theme);
+            var result = await _settingsService.UpdateThemeAsync(regNo.Value, request.Theme);
             return Ok(new { success = result });
         }
 
         [HttpPut("language")]
         public async Task<IActionResult> UpdateLanguage([FromBody] UpdateLanguageRequest request)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var result = await _settingsService.UpdateLanguageAsync(regNo, request.Language);
+            var result = await _settingsService.UpdateLanguageAsync(regNo.Value, request.Language);
             return Ok(new { success = result });
         }
 
         [HttpPut("font-size")]
         public async Task<IActionResult> UpdateFontSize([FromBody] UpdateFontSizeRequest request)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
                 return Unauthorized();
 
-            var result = await _settingsService.UpdateFontSizeAsync(regNo, request.FontSize);
+            var result = await _settingsService.UpdateFontSizeAsync(regNo.Value, request.FontSize);
             return Ok(new { success = result });
         }
     }

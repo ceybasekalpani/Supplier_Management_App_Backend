@@ -3,10 +3,10 @@ using TeaFactorySupplierManagement.Application.DTOs.Notifications;
 namespace TeaFactorySupplierManagement.Application.Interfaces
 {
     public interface INotificationService
-    {
-        Task<List<NotificationDto>> GetNotificationsForSupplierAsync(string regNo);
-        Task<int> GetUnreadCountAsync(string regNo);
-        Task MarkAsReadAsync(int notificationId, string regNo);
-        Task MarkAllAsReadAsync(string regNo);
-    }
+{
+    Task<List<NotificationDto>> GetNotificationsForSupplierAsync(int regNo);
+    Task<int> GetUnreadCountAsync(int regNo);
+    Task MarkAsReadAsync(int notificationId, int regNo);
+    Task MarkAllAsReadAsync(int regNo);
+}
 }

@@ -74,7 +74,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // Add AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
+// Add AutoMapper - Scan both API and Application assemblies
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<TeaFactorySupplierManagement.Application.Mappings.MappingProfile>();
+}, AppDomain.CurrentDomain.GetAssemblies());
 
 // Configure JWT Authentication
 var jwtKey = configuration["Jwt:Key"];

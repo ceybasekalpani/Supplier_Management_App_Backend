@@ -1,3 +1,5 @@
+﻿using TeaFactorySupplierManagement.Domain.Entities;
+
 namespace TeaFactorySupplierManagement.Domain.Interfaces
 {
     public interface IUnitOfWork : IDisposable
@@ -14,7 +16,7 @@ namespace TeaFactorySupplierManagement.Domain.Interfaces
         IRepository<NotificationRead> NotificationReads { get; }
         IRepository<NewsDismissed> NewsDismissed { get; }
         IRepository<UserSettings> UserSettings { get; }
-
+        
         Task<int> CompleteAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();

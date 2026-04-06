@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Application.DTOs.Notifications;
 using TeaFactorySupplierManagement.Application.Interfaces;
@@ -18,9 +18,10 @@ namespace TeaFactorySupplierManagement.Application.Services
             _mapper = mapper;
         }
 
-        public async Task<List<NotificationDto>> GetNotificationsForSupplierAsync(string regNo)
+        // In NotificationService.cs - Update the GetNotificationsForSupplierAsync method
+        public async Task<List<NotificationDto>> GetNotificationsForSupplierAsync(int regNo)
         {
-            var today = DateTime.UtcNow;
+            var today = DateTime.Now;
 
             var notifications = await _context.Notifications
                 .Where(n => n.IsActive &&
@@ -29,38 +30,41 @@ namespace TeaFactorySupplierManagement.Application.Services
                             (n.TargetRegNo == null || n.TargetRegNo == regNo))
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
+                .AsNoTracking()
                 .ToListAsync();
 
-            var readNotifications = await _context.NotificationReads
+            var readNotificationIds = await _context.NotificationReads
                 .Where(nr => nr.RegNo == regNo)
                 .Select(nr => nr.NotificationId)
-                .ToHashSetAsync();
+                .ToListAsync();
 
-            var result = new List<NotificationDto>();
-            foreach (var notification in notifications)
+            var readSet = new HashSet<int>(readNotificationIds);
+
+            // Fixed: Use proper null handling for each notification
+            return notifications.Select(notification => new NotificationDto
             {
-                result.Add(new NotificationDto
-                {
-                    Id = notification.Id,
-                    Title = notification.Title,
-                    Message = notification.Message,
-                    Type = notification.Type,
-                    CreatedAt = notification.CreatedAt,
-                    IsRead = readNotifications.Contains(notification.Id)
-                });
-            }
-
-            return result;
+                Id = notification.Id,
+                Title = notification.Title ?? string.Empty,
+                Message = notification.Message ?? string.Empty,
+                Type = notification.Type ?? "info",
+                CreatedAt = notification.CreatedAt,
+                IsRead = readSet.Contains(notification.Id)
+            }).ToList();
         }
 
-        public async Task<int> GetUnreadCountAsync(string regNo)
+        public async Task<int> GetUnreadCountAsync(int regNo)
         {
             var notifications = await GetNotificationsForSupplierAsync(regNo);
             return notifications.Count(n => !n.IsRead);
         }
 
-        public async Task MarkAsReadAsync(int notificationId, string regNo)
+        public async Task MarkAsReadAsync(int notificationId, int regNo)
         {
+            // Check if notification exists
+            var notification = await _context.Notifications.FindAsync(notificationId);
+            if (notification == null)
+                throw new ArgumentException($"Notification with ID {notificationId} not found");
+
             var exists = await _context.NotificationReads
                 .AnyAsync(nr => nr.NotificationId == notificationId && nr.RegNo == regNo);
 
@@ -70,16 +74,16 @@ namespace TeaFactorySupplierManagement.Application.Services
                 {
                     NotificationId = notificationId,
                     RegNo = regNo,
-                    ReadAt = DateTime.UtcNow
+                    ReadAt = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
             }
         }
 
-        public async Task MarkAllAsReadAsync(string regNo)
+        public async Task MarkAllAsReadAsync(int regNo)
         {
             var notifications = await GetNotificationsForSupplierAsync(regNo);
-            var unreadIds = notifications.Where(n => !n.IsRead).Select(n => n.Id);
+            var unreadIds = notifications.Where(n => !n.IsRead).Select(n => n.Id).ToList();
 
             foreach (var id in unreadIds)
             {
@@ -92,12 +96,15 @@ namespace TeaFactorySupplierManagement.Application.Services
                     {
                         NotificationId = id,
                         RegNo = regNo,
-                        ReadAt = DateTime.UtcNow
+                        ReadAt = DateTime.Now
                     });
                 }
             }
 
-            await _context.SaveChangesAsync();
+            if (unreadIds.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

@@ -16,47 +16,57 @@ namespace TeaFactorySupplierManagement.API.Controllers
             _notificationService = notificationService;
         }
 
+        private int? GetCurrentRegNo()
+        {
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
+            {
+                return null;
+            }
+            return regNo;
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetNotifications()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
-                return Unauthorized();
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
 
-            var notifications = await _notificationService.GetNotificationsForSupplierAsync(regNo);
+            var notifications = await _notificationService.GetNotificationsForSupplierAsync(regNo.Value);
             return Ok(notifications);
         }
 
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
-                return Unauthorized();
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
 
-            var count = await _notificationService.GetUnreadCountAsync(regNo);
+            var count = await _notificationService.GetUnreadCountAsync(regNo.Value);
             return Ok(new { unreadCount = count });
         }
 
         [HttpPost("{id}/mark-read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
-                return Unauthorized();
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
 
-            await _notificationService.MarkAsReadAsync(id, regNo);
-            return Ok(new { message = "Marked as read" });
+            await _notificationService.MarkAsReadAsync(id, regNo.Value);
+            return Ok(new { message = "Notification marked as read" });
         }
 
         [HttpPost("mark-all-read")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
-                return Unauthorized();
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
 
-            await _notificationService.MarkAllAsReadAsync(regNo);
+            await _notificationService.MarkAllAsReadAsync(regNo.Value);
             return Ok(new { message = "All notifications marked as read" });
         }
     }

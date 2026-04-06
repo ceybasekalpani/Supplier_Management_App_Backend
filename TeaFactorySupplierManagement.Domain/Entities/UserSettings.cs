@@ -7,8 +7,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
     public class UserSettings : BaseEntity
     {
         [Required]
-        [MaxLength(50)]
-        public string RegNo { get; set; } = string.Empty;
+        public int RegNo { get; set; }
 
         [MaxLength(20)]
         public string? Theme { get; set; } = "light";

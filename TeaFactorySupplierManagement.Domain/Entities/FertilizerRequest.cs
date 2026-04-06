@@ -12,8 +12,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public string RequestNo { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(50)]
-        public string RegNo { get; set; } = string.Empty;
+        public int RegNo { get; set; }
 
         [Required]
         [MaxLength(100)]

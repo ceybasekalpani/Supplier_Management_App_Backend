@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -28,7 +28,6 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<LoginResponseDto?> LoginAsync(string username, string password)
         {
-            // Find the login record
             var login = await _context.SupplierLogins
                 .Include(l => l.Supplier)
                 .FirstOrDefaultAsync(l => l.Username == username && l.IsActive);
@@ -36,33 +35,56 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (login == null)
                 return null;
 
-            // Verify password using BCrypt
-            if (!BCrypt.Net.BCrypt.Verify(password, login.PasswordHash))
+            bool passwordValid;
+
+            // Check if stored password is plain text (not a BCrypt hash).
+            // All valid BCrypt hashes start with $2a$, $2b$, or $2y$.
+            bool isPlainText = !login.PasswordHash.StartsWith("$2a$") &&
+                               !login.PasswordHash.StartsWith("$2b$") &&
+                               !login.PasswordHash.StartsWith("$2y$");
+
+            if (isPlainText)
+            {
+                // Plain text comparison for legacy/seed passwords
+                passwordValid = login.PasswordHash == password;
+
+                if (passwordValid)
+                {
+                    // Auto-upgrade: immediately replace plain text with a BCrypt hash
+                    login.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                // Standard BCrypt verification for already-hashed passwords
+                passwordValid = BCrypt.Net.BCrypt.Verify(password, login.PasswordHash);
+            }
+
+            if (!passwordValid)
                 return null;
 
-            // Get all registrations for this supplier
+            // Get registrations
             var registrations = await _context.RegSuppliers
                 .Where(r => r.RegNo == login.RegNo && (r.Active == true || r.Active == null))
                 .Select(r => new RegistrationDto
                 {
-                    RegNo = r.RegNo,
+                    RegNo = r.RegNo.ToString(),
                     Route = r.Route ?? string.Empty,
                     BankName = r.BankName,
                     AccountNumber = r.AccCode
                 })
                 .ToListAsync();
 
-            // Get user settings
             var settings = await _context.UserSettings
                 .FirstOrDefaultAsync(s => s.RegNo == login.RegNo);
 
-            // Generate JWT token
-            var token = await GenerateJwtTokenAsync(login);
+            var token = GenerateJwtToken(login);
 
             return new LoginResponseDto
             {
                 Token = token,
-                RegNo = login.RegNo,
+                RegNo = login.RegNo.ToString(),
                 Username = login.Username,
                 Name = login.Supplier?.RegName ?? login.Username,
                 Registrations = registrations,
@@ -72,35 +94,44 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<RegSupplier?> GetSupplierByRegNoAsync(string regNo)
         {
-            return await _context.RegSuppliers
-                .FirstOrDefaultAsync(r => r.RegNo == regNo);
+            if (int.TryParse(regNo, out int regNoInt))
+            {
+                return await _context.RegSuppliers
+                    .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
+            }
+            return null;
         }
 
         public async Task<List<RegistrationDto>> GetSupplierRegistrationsAsync(string supplierId)
         {
-            var registrations = await _context.RegSuppliers
-                .Where(r => r.RegNo == supplierId && (r.Active == true || r.Active == null))
-                .Select(r => new RegistrationDto
-                {
-                    RegNo = r.RegNo,
-                    Route = r.Route ?? string.Empty,
-                    BankName = r.BankName,
-                    AccountNumber = r.AccCode
-                })
-                .ToListAsync();
-
-            return registrations;
+            if (int.TryParse(supplierId, out int regNoInt))
+            {
+                return await _context.RegSuppliers
+                    .Where(r => r.RegNo == regNoInt && (r.Active == true || r.Active == null))
+                    .Select(r => new RegistrationDto
+                    {
+                        RegNo = r.RegNo.ToString(),
+                        Route = r.Route ?? string.Empty,
+                        BankName = r.BankName,
+                        AccountNumber = r.AccCode
+                    })
+                    .ToListAsync();
+            }
+            return new List<RegistrationDto>();
         }
 
         public async Task<bool> SelectRegistrationAsync(string regNo)
         {
-            var registration = await _context.RegSuppliers
-                .FirstOrDefaultAsync(r => r.RegNo == regNo);
-
-            return registration != null;
+            if (int.TryParse(regNo, out int regNoInt))
+            {
+                var registration = await _context.RegSuppliers
+                    .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
+                return registration != null;
+            }
+            return false;
         }
 
-        public async Task<string> GenerateJwtTokenAsync(SupplierLogin login)
+        public string GenerateJwtToken(SupplierLogin login)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? "default-secret-key-for-development-only-32chars!");
@@ -109,7 +140,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 new Claim(ClaimTypes.NameIdentifier, login.Id.ToString()),
                 new Claim(ClaimTypes.Name, login.Username),
-                new Claim("RegNo", login.RegNo),
+                new Claim("RegNo", login.RegNo.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

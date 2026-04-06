@@ -1,19 +1,17 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TeaFactorySupplierManagement.Domain.Entities
 {
-    [Table("Supplier_Management_Notification_Reads")]
+    [Table("Supplier_Management_Notification_Read")]
     public class NotificationRead
     {
+        // Remove any [Key] attributes - configured in Fluent API
         public int NotificationId { get; set; }
+        public int RegNo { get; set; }
+        public DateTime ReadAt { get; set; }
 
-        [MaxLength(50)]
-        public string RegNo { get; set; } = string.Empty;
-
-        public DateTime ReadAt { get; set; } = DateTime.UtcNow;
-
+        // Navigation properties
         [ForeignKey("NotificationId")]
         public virtual Notification? Notification { get; set; }
 

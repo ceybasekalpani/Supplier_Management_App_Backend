@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Application.DTOs.Leaf;
 using TeaFactorySupplierManagement.Application.Interfaces;
@@ -20,14 +20,11 @@ namespace TeaFactorySupplierManagement.Application.Services
             _factorySetupService = factorySetupService;
         }
 
-        public async Task<MonthlyLeafSummaryDto> GetMonthlyLeafCollectionAsync(string regNo, int year, int month)
+        public async Task<MonthlyLeafSummaryDto> GetMonthlyLeafCollectionAsync(int regNo, int year, int month)
         {
+            var monthName = new DateTime(year, month, 1).ToString("MMMM");
             var hasSuper = await _factorySetupService.IsSuperLeafEnabledAsync();
 
-            // Get the month name
-            var monthName = new DateTime(year, month, 1).ToString("MMMM");
-
-            // Query leaf collections for the specified month
             var collections = await _context.TrLeafCollectionsTemp
                 .Where(l => l.RegNo == regNo && l.MonthName == monthName && l.LogTime!.Value.Year == year)
                 .OrderBy(l => l.DayNo)
@@ -46,8 +43,11 @@ namespace TeaFactorySupplierManagement.Application.Services
 
                 daysWithData.Add(day);
 
-                var netWeight = (collection.Qty ?? 0) - (collection.WaterWgt ?? 0);
-                totalGross += collection.GrossQty ?? 0;
+                var gross = collection.Gross ?? 0;
+                var water = collection.Water ?? 0;
+                var netWeight = collection.NetWeight ?? 0;
+
+                totalGross += gross;
 
                 if (collection.LeafType == "Super" && hasSuper)
                 {
@@ -55,9 +55,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                     leafData.Add(new LeafCollectionDto
                     {
                         Day = day,
-                        Gross = collection.GrossQty ?? 0,
-                        Bags = collection.NoofBags ?? 0,
-                        Water = collection.WaterWgt ?? 0,
+                        Gross = gross,
+                        Bags = 1,
+                        Water = water,
                         NetWeight = 0,
                         SuperNetWeight = netWeight
                     });
@@ -68,9 +68,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                     leafData.Add(new LeafCollectionDto
                     {
                         Day = day,
-                        Gross = collection.GrossQty ?? 0,
-                        Bags = collection.NoofBags ?? 0,
-                        Water = collection.WaterWgt ?? 0,
+                        Gross = gross,
+                        Bags = 1,
+                        Water = water,
                         NetWeight = netWeight,
                         SuperNetWeight = null
                     });
@@ -90,7 +90,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             };
         }
 
-        public async Task<List<SixMonthHistoryDto>> GetSixMonthHistoryAsync(string regNo)
+        public async Task<List<SixMonthHistoryDto>> GetSixMonthHistoryAsync(int regNo)
         {
             var today = DateTime.UtcNow;
             var sixMonthsAgo = today.AddMonths(-5);
@@ -119,8 +119,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                     if (day > 0)
                     {
                         daysWithData.Add(day);
-                        totalGross += collection.GrossQty ?? 0;
-                        totalNet += (collection.Qty ?? 0) - (collection.WaterWgt ?? 0);
+                        totalGross += collection.Gross ?? 0;
+                        totalNet += collection.NetWeight ?? 0;
                     }
                 }
 
@@ -138,7 +138,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             return result;
         }
 
-        public async Task<TodayLeafDto> GetTodayLeafCollectionAsync(string regNo)
+        public async Task<TodayLeafDto> GetTodayLeafCollectionAsync(int regNo)
         {
             var today = DateTime.UtcNow.Date;
             var hasSuper = await _factorySetupService.IsSuperLeafEnabledAsync();
@@ -153,8 +153,8 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             foreach (var collection in collections)
             {
-                var netWeight = (collection.Qty ?? 0) - (collection.WaterWgt ?? 0);
-                bagCount += collection.NoofBags ?? 0;
+                var netWeight = collection.NetWeight ?? 0;
+                bagCount++;
 
                 if (collection.LeafType == "Super" && hasSuper)
                 {
@@ -175,7 +175,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             };
         }
 
-        public async Task<decimal> GetCurrentMonthTotalAsync(string regNo)
+        public async Task<decimal> GetCurrentMonthTotalAsync(int regNo)
         {
             var today = DateTime.UtcNow;
             var monthName = today.ToString("MMMM");
@@ -184,10 +184,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .Where(l => l.RegNo == regNo && l.MonthName == monthName)
                 .ToListAsync();
 
-            return collections.Sum(c => (c.Qty ?? 0) - (c.WaterWgt ?? 0));
+            return collections.Sum(c => c.NetWeight ?? 0);
         }
 
-        public async Task<Dictionary<int, LeafCollectionDto>> GetLeafDataByMonthAsync(string regNo, int year, int month)
+        public async Task<Dictionary<int, LeafCollectionDto>> GetLeafDataByMonthAsync(int regNo, int year, int month)
         {
             var monthName = new DateTime(year, month, 1).ToString("MMMM");
             var hasSuper = await _factorySetupService.IsSuperLeafEnabledAsync();
@@ -203,14 +203,16 @@ namespace TeaFactorySupplierManagement.Application.Services
                 var day = collection.DayNo ?? 0;
                 if (day == 0) continue;
 
-                var netWeight = (collection.Qty ?? 0) - (collection.WaterWgt ?? 0);
+                var gross = collection.Gross ?? 0;
+                var water = collection.Water ?? 0;
+                var netWeight = collection.NetWeight ?? 0;
 
                 result[day] = new LeafCollectionDto
                 {
                     Day = day,
-                    Gross = collection.GrossQty ?? 0,
-                    Bags = collection.NoofBags ?? 0,
-                    Water = collection.WaterWgt ?? 0,
+                    Gross = gross,
+                    Bags = 1,
+                    Water = water,
                     NetWeight = collection.LeafType == "Super" && hasSuper ? 0 : netWeight,
                     SuperNetWeight = collection.LeafType == "Super" && hasSuper ? netWeight : null
                 };

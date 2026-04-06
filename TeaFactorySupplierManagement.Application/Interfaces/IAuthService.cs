@@ -9,6 +9,6 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         Task<RegSupplier?> GetSupplierByRegNoAsync(string regNo);
         Task<List<RegistrationDto>> GetSupplierRegistrationsAsync(string supplierId);
         Task<bool> SelectRegistrationAsync(string regNo);
-        Task<string> GenerateJwtTokenAsync(SupplierLogin login);
+        string GenerateJwtToken(SupplierLogin login);  // Changed from GenerateJwtTokenAsync
     }
 }

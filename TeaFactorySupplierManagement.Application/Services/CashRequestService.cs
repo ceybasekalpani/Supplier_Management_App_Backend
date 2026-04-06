@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Application.DTOs.Requests;
 using TeaFactorySupplierManagement.Application.Interfaces;
@@ -20,7 +20,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             _factorySetupService = factorySetupService;
         }
 
-        public async Task<List<CashRequestDto>> GetRequestsByRegNoAsync(string regNo)
+        public async Task<List<CashRequestDto>> GetRequestsByRegNoAsync(int regNo)
         {
             var requests = await _context.CashRequests
                 .Where(r => r.RegNo == regNo)
@@ -38,20 +38,25 @@ namespace TeaFactorySupplierManagement.Application.Services
             return request != null ? _mapper.Map<CashRequestDto>(request) : null;
         }
 
-        public async Task<CashRequestDto> CreateRequestAsync(string regNo, CreateCashRequestDto request)
+        public async Task<CashRequestDto> CreateRequestAsync(int regNo, CreateCashRequestDto request)
         {
-            // Check if feature is enabled
             if (!await IsCashRequestEnabledAsync())
                 throw new InvalidOperationException("Cash request feature is not enabled");
 
-            // Generate unique request number
+            var now = DateTime.Now;
+
+            // Auto-generate request number
             var requestNo = await GenerateRequestNumberAsync(request.RequestType);
 
             var cashRequest = _mapper.Map<CashRequest>(request);
             cashRequest.RegNo = regNo;
             cashRequest.RequestNo = requestNo;
-            cashRequest.RequestDate = DateTime.UtcNow.Date;
-            cashRequest.RequestTime = DateTime.UtcNow.TimeOfDay;
+
+            // Auto-set all date/time/month fields from server local time — not from user input
+            cashRequest.RequestDate = now.Date;
+            cashRequest.RequestTime = now.TimeOfDay;
+            cashRequest.Month = now.ToString("MMMM yyyy");                          // e.g. "March 2026"
+            cashRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);        // e.g. 2026-03-01
             cashRequest.Status = "pending";
 
             _context.CashRequests.Add(cashRequest);
@@ -66,17 +71,17 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (request == null) return false;
 
             request.Status = status;
-            request.UpdatedAt = DateTime.UtcNow;
+            request.UpdatedAt = DateTime.Now;
             request.Remarks = remarks;
 
             if (status == "approved" && approvedBy != null)
             {
                 request.ApprovedBy = approvedBy;
-                request.ApprovedAt = DateTime.UtcNow;
+                request.ApprovedAt = DateTime.Now;
             }
             else if (status == "paid")
             {
-                request.PaidAt = DateTime.UtcNow;
+                request.PaidAt = DateTime.Now;
             }
 
             await _context.SaveChangesAsync();
@@ -102,7 +107,7 @@ namespace TeaFactorySupplierManagement.Application.Services
         private async Task<string> GenerateRequestNumberAsync(string requestType)
         {
             var prefix = requestType.ToUpper() == "ADVANCE" ? "ADV" : "LOAN";
-            var yearMonth = DateTime.UtcNow.ToString("yyyyMM");
+            var yearMonth = DateTime.Now.ToString("yyyyMM");
 
             var lastRequest = await _context.CashRequests
                 .Where(r => r.RequestNo.StartsWith($"{prefix}-{yearMonth}"))
@@ -114,9 +119,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 var parts = lastRequest.RequestNo.Split('-');
                 if (parts.Length == 3 && int.TryParse(parts[2], out int lastSeq))
-                {
                     sequence = lastSeq + 1;
-                }
             }
 
             return $"{prefix}-{yearMonth}-{sequence:D3}";

@@ -20,8 +20,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMyRequests()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
                 return Unauthorized();
 
             var requests = await _cashRequestService.GetRequestsByRegNoAsync(regNo);
@@ -34,15 +34,14 @@ namespace TeaFactorySupplierManagement.API.Controllers
             var request = await _cashRequestService.GetRequestByIdAsync(id);
             if (request == null)
                 return NotFound();
-
             return Ok(request);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateRequest([FromBody] CreateCashRequestDto request)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
                 return Unauthorized();
 
             try
@@ -59,8 +58,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRequest(int id, [FromBody] UpdateCashRequestDto request)
         {
-            // Only admins should update status in production
-            var result = await _cashRequestService.UpdateRequestStatusAsync(id, request.Status ?? "pending", null, request.Remarks);
+            var result = await _cashRequestService.UpdateRequestStatusAsync(
+                id,
+                request.Status ?? "pending",
+                request.ApprovedBy,
+                request.Remarks);
 
             if (!result)
                 return NotFound();
@@ -72,10 +74,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
         public async Task<IActionResult> DeleteRequest(int id)
         {
             var result = await _cashRequestService.DeleteRequestAsync(id);
-
             if (!result)
                 return NotFound();
-
             return Ok(new { message = "Request deleted successfully" });
         }
 

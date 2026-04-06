@@ -33,7 +33,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 // Return default values if no setup exists
                 return new FactoryFeaturesDto
                 {
-                    IsSuper = false,
+                    IsSuper = true,
                     IsCashRequestEnabled = true,
                     IsItemRequestEnabled = true,
                     IsFertilizerRequestEnabled = true

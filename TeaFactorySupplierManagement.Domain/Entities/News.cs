@@ -29,6 +29,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         [MaxLength(100)]
         public string CreatedBy { get; set; } = string.Empty;
 
+        // Navigation property
         public virtual ICollection<NewsDismissed> DismissedBy { get; set; } = new List<NewsDismissed>();
     }
 }

@@ -20,8 +20,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMyRequests()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
                 return Unauthorized();
 
             var requests = await _itemRequestService.GetRequestsByRegNoAsync(regNo);
@@ -34,15 +34,14 @@ namespace TeaFactorySupplierManagement.API.Controllers
             var request = await _itemRequestService.GetRequestByIdAsync(id);
             if (request == null)
                 return NotFound();
-
             return Ok(request);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateRequest([FromBody] CreateItemRequestDto request)
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
                 return Unauthorized();
 
             try
@@ -56,14 +55,27 @@ namespace TeaFactorySupplierManagement.API.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRequest(int id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateRequest(int id, [FromBody] UpdateItemRequestDto request)
         {
-            var result = await _itemRequestService.DeleteRequestAsync(id);
+            var result = await _itemRequestService.UpdateRequestStatusAsync(
+                id,
+                request.Status ?? "pending",
+                request.ApprovedBy,
+                request.Remarks);  
 
             if (!result)
                 return NotFound();
 
+            return Ok(new { message = "Request updated successfully" });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteRequest(int id)
+        {
+            var result = await _itemRequestService.DeleteRequestAsync(id);
+            if (!result)
+                return NotFound();
             return Ok(new { message = "Request deleted successfully" });
         }
 

@@ -7,8 +7,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
     public class SupplierLogin : BaseEntity
     {
         [Required]
-        [MaxLength(50)]
-        public string RegNo { get; set; } = string.Empty;
+        public int RegNo { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -19,7 +18,6 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public bool IsActive { get; set; } = true;
 
-        // Navigation property
         [ForeignKey("RegNo")]
         public virtual RegSupplier? Supplier { get; set; }
     }
