@@ -13,12 +13,6 @@ namespace TeaFactorySupplierManagement.Application.Services
         private readonly IMapper _mapper;
         private readonly IFactorySetupService _factorySetupService;
 
-        private readonly List<string> _itemTypes = new()
-        {
-            "Pruning Shears", "Harvesting Bag", "Protective Gloves",
-            "Rain Coat", "Bamboo Basket", "Harvesting Knife",
-            "Weighing Bag", "Sun Hat"
-        };
 
         public ItemRequestService(ApplicationDbContext context, IMapper mapper, IFactorySetupService factorySetupService)
         {
@@ -157,9 +151,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             return factorySetup?.IsItemRequest ?? true;
         }
 
-        public Task<List<string>> GetItemTypesAsync()
+        public async Task<List<string>> GetItemTypesAsync()
         {
-            return Task.FromResult(_itemTypes);
+            return await _context.FertilizerItemStore
+                .Where(f => f.IsActive && f.ItemType != null)
+                .Select(f => f.ItemType!)
+                .Distinct()
+                .OrderBy(f => f)
+                .ToListAsync();
         }
 
         private async Task<string> GenerateRequestNumberAsync()

@@ -136,6 +136,36 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.ToTable("Supplier_Management_Factory_Setup");
                 });
 
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.FertilizerItemStore", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FertilizerType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ItemType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Supplier_Management_FertilizerItem_Store");
+                });
+
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.FertilizerRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -331,6 +361,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsActive", "ShowPopup", "StartDate", "EndDate");
+
                     b.ToTable("Supplier_Management_News");
                 });
 
@@ -349,7 +381,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasIndex("RegNo");
 
-                    b.ToTable("Supplier_Management_News_Dismissed");
+                    b.ToTable("Supplier_Management_News_Dismissed", (string)null);
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.Notification", b =>
@@ -404,6 +436,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasIndex("TargetRegNo");
 
+                    b.HasIndex("IsActive", "StartDate", "EndDate", "TargetRegNo");
+
                     b.ToTable("Supplier_Management_Notifications");
                 });
 
@@ -420,9 +454,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasKey("NotificationId", "RegNo");
 
+                    b.HasIndex("NotificationId");
+
                     b.HasIndex("RegNo");
 
-                    b.ToTable("Supplier_Management_Notification_Reads");
+                    b.ToTable("Supplier_Management_Notification_Read", (string)null);
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", b =>
@@ -542,16 +578,16 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("IDNo");
 
-                    b.Property<decimal?>("Land_Acre")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<int?>("Land_Acre")
+                        .HasColumnType("int")
                         .HasColumnName("Land_Acre");
 
-                    b.Property<decimal?>("Land_Perch")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<int?>("Land_Perch")
+                        .HasColumnType("int")
                         .HasColumnName("Land_Perch");
 
-                    b.Property<decimal?>("Land_Rood")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<int?>("Land_Rood")
+                        .HasColumnType("int")
                         .HasColumnName("Land_Rood");
 
                     b.Property<decimal?>("LeafAmount")
@@ -562,12 +598,12 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("LeafBag");
 
-                    b.Property<decimal?>("LeafTot")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<int?>("LeafTot")
+                        .HasColumnType("int")
                         .HasColumnName("LeafTot");
 
-                    b.Property<decimal?>("LeafTot_Super")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<int?>("LeafTot_Super")
+                        .HasColumnType("int")
                         .HasColumnName("LeafTot_Super");
 
                     b.Property<decimal?>("LoanBalance")
@@ -679,8 +715,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("SpTransRate");
 
-                    b.Property<decimal?>("SpecialRate")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<bool?>("SpecialRate")
+                        .HasColumnType("bit")
                         .HasColumnName("SpecialRate");
 
                     b.Property<decimal?>("Stamp")
@@ -740,8 +776,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("Welfare");
 
-                    b.Property<decimal?>("WelfareCont")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<bool?>("WelfareCont")
+                        .HasColumnType("bit")
                         .HasColumnName("WelfareCont");
 
                     b.HasKey("RegNo");
@@ -797,13 +833,42 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Ind"));
 
+                    b.Property<decimal?>("BagWeight")
+                        .HasColumnType("money")
+                        .HasColumnName("BagWeight");
+
+                    b.Property<decimal?>("Boild")
+                        .HasColumnType("money")
+                        .HasColumnName("Boild");
+
+                    b.Property<int?>("Coarse")
+                        .HasColumnType("int")
+                        .HasColumnName("Coarse");
+
                     b.Property<int?>("DayNo")
                         .HasColumnType("int")
                         .HasColumnName("DayNo");
 
-                    b.Property<decimal?>("GrossQty")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("GrossQty");
+                    b.Property<string>("Dealer")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("Dealer");
+
+                    b.Property<decimal?>("Excess_Leaf")
+                        .HasColumnType("money")
+                        .HasColumnName("Excess_Leaf");
+
+                    b.Property<decimal?>("Gross")
+                        .HasColumnType("money")
+                        .HasColumnName("Gross");
+
+                    b.Property<bool?>("IsDeduction")
+                        .HasColumnType("bit")
+                        .HasColumnName("IsDeduction");
+
+                    b.Property<bool?>("IsTransfered")
+                        .HasColumnType("bit")
+                        .HasColumnName("IsTransfered");
 
                     b.Property<string>("LeafType")
                         .HasMaxLength(10)
@@ -814,26 +879,88 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("LogTime");
 
+                    b.Property<string>("Mode")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("Mode");
+
                     b.Property<string>("MonthName")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("MonthName");
 
-                    b.Property<int?>("NoofBags")
-                        .HasColumnType("int")
-                        .HasColumnName("NoofBags");
+                    b.Property<decimal?>("NetWeight")
+                        .HasColumnType("money")
+                        .HasColumnName("NetWeight");
 
-                    b.Property<decimal?>("Qty")
-                        .HasColumnType("decimal(18,2)")
+                    b.Property<string>("PC_Name")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("PC_Name");
+
+                    b.Property<int?>("Qty")
+                        .HasColumnType("int")
                         .HasColumnName("Qty");
 
                     b.Property<int?>("RegNo")
                         .HasColumnType("int")
                         .HasColumnName("RegNo");
 
-                    b.Property<decimal?>("WaterWgt")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("WaterWgt");
+                    b.Property<int?>("Rejected")
+                        .HasColumnType("int")
+                        .HasColumnName("Rejected");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Route");
+
+                    b.Property<decimal?>("RouteDeduct")
+                        .HasColumnType("money")
+                        .HasColumnName("RouteDeduct");
+
+                    b.Property<decimal?>("RouteDeductPre")
+                        .HasColumnType("money")
+                        .HasColumnName("RouteDeductPre");
+
+                    b.Property<string>("Shift")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("Shift");
+
+                    b.Property<string>("SmallHolderRefName")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("SmallHolderRefName");
+
+                    b.Property<int?>("SmallHolderRefNo")
+                        .HasColumnType("int")
+                        .HasColumnName("SmallHolderRefNo");
+
+                    b.Property<decimal?>("Spd")
+                        .HasColumnType("money")
+                        .HasColumnName("Spd");
+
+                    b.Property<decimal?>("Transfer")
+                        .HasColumnType("money")
+                        .HasColumnName("Transfer");
+
+                    b.Property<decimal?>("TransferDeleted")
+                        .HasColumnType("money")
+                        .HasColumnName("TransferDeleted");
+
+                    b.Property<decimal?>("Transport")
+                        .HasColumnType("money")
+                        .HasColumnName("Transport");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("UserName");
+
+                    b.Property<int?>("Water")
+                        .HasColumnType("int")
+                        .HasColumnName("Water");
 
                     b.HasKey("Ind");
 
@@ -944,11 +1071,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.News", "News")
                         .WithMany("DismissedBy")
                         .HasForeignKey("NewsId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
-                        .WithMany()
+                        .WithMany("NewsDismissed")
                         .HasForeignKey("RegNo")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -972,11 +1099,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.Notification", "Notification")
                         .WithMany("ReadBy")
                         .HasForeignKey("NotificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
-                        .WithMany()
+                        .WithMany("NotificationReads")
                         .HasForeignKey("RegNo")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1039,6 +1166,10 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Navigation("LeafCollections");
 
                     b.Navigation("Logins");
+
+                    b.Navigation("NewsDismissed");
+
+                    b.Navigation("NotificationReads");
 
                     b.Navigation("Settings");
                 });

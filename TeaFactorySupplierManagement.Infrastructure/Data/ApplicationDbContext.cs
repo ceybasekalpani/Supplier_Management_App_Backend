@@ -25,6 +25,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<NotificationRead> NotificationRead { get; set; }
         public DbSet<NewsDismissed> NewsDismissed { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
+        public DbSet<FertilizerItemStore> FertilizerItemStore { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

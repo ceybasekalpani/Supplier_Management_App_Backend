@@ -13,10 +13,6 @@ namespace TeaFactorySupplierManagement.Application.Services
         private readonly IMapper _mapper;
         private readonly IFactorySetupService _factorySetupService;
 
-        private readonly List<string> _fertilizerTypes = new()
-        {
-            "Urea", "Potash", "TSP", "Dolomite", "NPK Mixture", "Organic Compost"
-        };
 
         public FertilizerRequestService(ApplicationDbContext context, IMapper mapper, IFactorySetupService factorySetupService)
         {
@@ -150,9 +146,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             return factorySetup?.IsFertilizerRequest ?? true;
         }
 
-        public Task<List<string>> GetFertilizerTypesAsync()
+        public async Task<List<string>> GetFertilizerTypesAsync()
         {
-            return Task.FromResult(_fertilizerTypes);
+            return await _context.FertilizerItemStore
+                .Where(f => f.IsActive && f.FertilizerType != null)
+                .Select(f => f.FertilizerType!)
+                .Distinct()
+                .OrderBy(f => f)
+                .ToListAsync();
         }
 
         private async Task<string> GenerateRequestNumberAsync()
