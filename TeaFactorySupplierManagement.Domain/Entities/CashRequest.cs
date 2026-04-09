@@ -14,9 +14,9 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         [Required]
         public int RegNo { get; set; }
 
-        [Required]
+   
         [MaxLength(20)]
-        public string RequestType { get; set; } = string.Empty;
+        public required string RequestType { get; set; } 
 
         [Required]
         [MaxLength(20)]
@@ -47,5 +47,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         [ForeignKey("RegNo")]
         public virtual RegSupplier? Supplier { get; set; }
+
+        
     }
 }

@@ -22,7 +22,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<ItemRequest> ItemRequests { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<News> News { get; set; }
-        public DbSet<NotificationRead> NotificationReads { get; set; }
+        public DbSet<NotificationRead> NotificationRead { get; set; }
         public DbSet<NewsDismissed> NewsDismissed { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
 
@@ -56,7 +56,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
 
                 // Configure relationships
                 entity.HasOne(nd => nd.News)
-                    .WithMany()
+                    .WithMany(n => n.DismissedBy)
                     .HasForeignKey(nd => nd.NewsId)
                     .OnDelete(DeleteBehavior.Restrict);
 
@@ -80,7 +80,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
 
                 // Configure relationships
                 entity.HasOne(nr => nr.Notification)
-                    .WithMany()
+                    .WithMany(n => n.ReadBy)
                     .HasForeignKey(nr => nr.NotificationId)
                     .OnDelete(DeleteBehavior.Restrict);
 

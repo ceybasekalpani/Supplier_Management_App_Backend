@@ -33,7 +33,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            var readNotificationIds = await _context.NotificationReads
+            var readNotificationIds = await _context.NotificationRead
                 .Where(nr => nr.RegNo == regNo)
                 .Select(nr => nr.NotificationId)
                 .ToListAsync();
@@ -65,12 +65,12 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (notification == null)
                 throw new ArgumentException($"Notification with ID {notificationId} not found");
 
-            var exists = await _context.NotificationReads
+            var exists = await _context.NotificationRead
                 .AnyAsync(nr => nr.NotificationId == notificationId && nr.RegNo == regNo);
 
             if (!exists)
             {
-                _context.NotificationReads.Add(new NotificationRead
+                _context.NotificationRead.Add(new NotificationRead
                 {
                     NotificationId = notificationId,
                     RegNo = regNo,
@@ -87,12 +87,12 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             foreach (var id in unreadIds)
             {
-                var exists = await _context.NotificationReads
+                var exists = await _context.NotificationRead
                     .AnyAsync(nr => nr.NotificationId == id && nr.RegNo == regNo);
 
                 if (!exists)
                 {
-                    _context.NotificationReads.Add(new NotificationRead
+                    _context.NotificationRead.Add(new NotificationRead
                     {
                         NotificationId = id,
                         RegNo = regNo,

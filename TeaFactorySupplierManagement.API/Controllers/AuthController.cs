@@ -32,8 +32,6 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPost("logout")]
         public IActionResult Logout()
         {
-            // In a stateless JWT system, logout is handled client-side
-            // by removing the token
             return Ok(new { message = "Logged out successfully" });
         }
 
