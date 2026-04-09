@@ -27,6 +27,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<FertilizerItemStore> FertilizerItemStore { get; set; }
 
+        // View - read-only, joined from Reg_Supplier + Supplier_Management_Login
+        public DbSet<SupplierLoginView> SupplierLoginView { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -176,6 +179,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             modelBuilder.Entity<ItemRequest>()
                 .Property(i => i.Status)
                 .HasDefaultValue("pending");
+
+            // Map SupplierLoginView to the database view (keyless - read only)
+            modelBuilder.Entity<SupplierLoginView>()
+                .HasNoKey()
+                .ToView("vw_SupplierLoginDetails");
         }
     }
 }

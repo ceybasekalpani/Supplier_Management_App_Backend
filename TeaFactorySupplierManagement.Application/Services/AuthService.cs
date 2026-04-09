@@ -28,9 +28,22 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<LoginResponseDto?> LoginAsync(string username, string password)
         {
-            var login = await _context.SupplierLogins
-                .Include(l => l.Supplier)
-                .FirstOrDefaultAsync(l => l.Username == username && l.IsActive);
+            // Suppliers log in using their RegNo as the username
+            SupplierLogin? login = null;
+            if (int.TryParse(username, out int regNoInt))
+            {
+                login = await _context.SupplierLogins
+                    .Include(l => l.Supplier)
+                    .FirstOrDefaultAsync(l => l.RegNo == regNoInt && l.IsActive);
+            }
+
+            // Fall back to username field for backward compatibility
+            if (login == null)
+            {
+                login = await _context.SupplierLogins
+                    .Include(l => l.Supplier)
+                    .FirstOrDefaultAsync(l => l.Username == username && l.IsActive);
+            }
 
             if (login == null)
                 return null;
@@ -129,6 +142,60 @@ namespace TeaFactorySupplierManagement.Application.Services
                 return registration != null;
             }
             return false;
+        }
+
+        public async Task<bool> ChangePasswordAsync(int regNo, string currentPassword, string newPassword)
+        {
+            var login = await _context.SupplierLogins
+                .FirstOrDefaultAsync(l => l.RegNo == regNo && l.IsActive);
+
+            if (login == null)
+                return false;
+
+            bool isPlainText = !login.PasswordHash.StartsWith("$2a$") &&
+                               !login.PasswordHash.StartsWith("$2b$") &&
+                               !login.PasswordHash.StartsWith("$2y$");
+
+            bool currentValid = isPlainText
+                ? login.PasswordHash == currentPassword
+                : BCrypt.Net.BCrypt.Verify(currentPassword, login.PasswordHash);
+
+            if (!currentValid)
+                return false;
+
+            login.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            login.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> CreateSupplierLoginAsync(int regNo, string initialPassword)
+        {
+            // Verify the supplier exists in Reg_Supplier
+            var supplier = await _context.RegSuppliers
+                .FirstOrDefaultAsync(r => r.RegNo == regNo);
+
+            if (supplier == null)
+                return false;
+
+            // Remove any existing login for this RegNo first
+            var existing = await _context.SupplierLogins
+                .FirstOrDefaultAsync(l => l.RegNo == regNo);
+
+            if (existing != null)
+                _context.SupplierLogins.Remove(existing);
+
+            var login = new SupplierLogin
+            {
+                RegNo = regNo,
+                Username = regNo.ToString(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(initialPassword),
+                IsActive = true
+            };
+
+            _context.SupplierLogins.Add(login);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public string GenerateJwtToken(SupplierLogin login)

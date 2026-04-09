@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using TeaFactorySupplierManagement.Application.DTOs.Auth;
 using TeaFactorySupplierManagement.Application.Interfaces;
 
@@ -79,6 +78,34 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 return BadRequest(new { message = "Invalid registration number" });
 
             return Ok(new { message = "Registration selected successfully" });
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
+        {
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
+                return Unauthorized();
+
+            var result = await _authService.ChangePasswordAsync(regNo, request.CurrentPassword, request.NewPassword);
+
+            if (!result)
+                return BadRequest(new { message = "Current password is incorrect" });
+
+            return Ok(new { message = "Password changed successfully" });
+        }
+
+        // Admin only: create initial login for a supplier using their RegNo as username
+        [HttpPost("create-login")]
+        public async Task<IActionResult> CreateSupplierLogin([FromBody] CreateSupplierLoginDto request)
+        {
+            var result = await _authService.CreateSupplierLoginAsync(request.RegNo, request.InitialPassword);
+
+            if (!result)
+                return BadRequest(new { message = "Supplier not found or could not create login" });
+
+            return Ok(new { message = $"Login created for supplier {request.RegNo}. Username is their RegNo." });
         }
     }
 
