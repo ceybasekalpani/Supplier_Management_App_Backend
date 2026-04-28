@@ -8,6 +8,7 @@ using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.API.Middleware;
 using TeaFactorySupplierManagement.Infrastructure.Repositories;
 using TeaFactorySupplierManagement.Domain.Interfaces;
+using TeaFactorySupplierManagement.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,7 @@ var configuration = builder.Configuration;
 // Add services to container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpClient();
 
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(c =>
@@ -145,6 +147,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INewsService, NewsService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IFactorySetupService, FactorySetupService>();
+builder.Services.AddScoped<ISupabaseStorageService, SupabaseStorageService>();
 
 // Register Unit of Work and Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -11,10 +11,18 @@ namespace TeaFactorySupplierManagement.API.Controllers
     public class SettingsController : ControllerBase
     {
         private readonly ISettingsService _settingsService;
+        private readonly ISupabaseStorageService _storageService;
+        private readonly ILogger<SettingsController> _logger;
 
-        public SettingsController(ISettingsService settingsService)
+        private static readonly string[] AllowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/octet-stream"];
+        private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+        private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10 MB
+
+        public SettingsController(ISettingsService settingsService, ISupabaseStorageService storageService, ILogger<SettingsController> logger)
         {
             _settingsService = settingsService;
+            _storageService = storageService;
+            _logger = logger;
         }
 
         private int? GetCurrentRegNo()
@@ -49,15 +57,91 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(result);
         }
 
+        // Used by Swagger / browser uploads
         [HttpPut("profile-image")]
-        public async Task<IActionResult> UpdateProfileImage([FromBody] UpdateProfileImageDto request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateProfileImage(IFormFile image)
         {
             var regNo = GetCurrentRegNo();
-            if (regNo == null)
-                return Unauthorized();
+            if (regNo == null) return Unauthorized();
 
-            var result = await _settingsService.UpdateProfileImageAsync(regNo.Value, request.ProfileImage);
-            return Ok(new { success = result });
+            _logger.LogInformation("profile-image received: file={File}, contentType={CT}, length={Len}",
+                image?.FileName, image?.ContentType, image?.Length);
+
+            if (image == null || image.Length == 0)
+                return BadRequest(new { message = "No image file provided." });
+
+            var ext = Path.GetExtension(image.FileName)?.ToLowerInvariant() ?? "";
+            var validType = AllowedMimeTypes.Contains(image.ContentType) || AllowedExtensions.Contains(ext);
+            if (!validType)
+                return BadRequest(new { message = "Only JPEG, PNG, and WebP images are allowed." });
+
+            if (image.Length > MaxImageSizeBytes)
+                return BadRequest(new { message = "Image must be smaller than 10 MB." });
+
+            var currentSettings = await _settingsService.GetSettingsByRegNoAsync(regNo.Value);
+            var oldImageUrl = currentSettings?.ProfileImage;
+
+            await using var stream = image.OpenReadStream();
+            var publicUrl = await _storageService.UploadProfileImageAsync(
+                regNo.Value, stream, image.FileName, image.ContentType);
+
+            var saved = await _settingsService.UpdateProfileImageAsync(regNo.Value, publicUrl);
+
+            // Compare paths without ?v= cache-bust param — same path means same file, don't delete
+            if (saved && oldImageUrl != null &&
+                oldImageUrl.Split('?')[0] != publicUrl.Split('?')[0])
+                await _storageService.DeleteProfileImageAsync(oldImageUrl);
+
+            return Ok(new { success = saved, imageUrl = publicUrl });
+        }
+
+        // Used by mobile app — receives base64 to avoid React Native FormData/multipart issues
+        [HttpPut("profile-image-base64")]
+        public async Task<IActionResult> UpdateProfileImageBase64([FromBody] UpdateProfileImageBase64Dto request)
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
+
+            if (string.IsNullOrEmpty(request.ImageBase64))
+                return BadRequest(new { message = "No image data provided." });
+
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(request.ImageBase64); }
+            catch { return BadRequest(new { message = "Invalid image data." }); }
+
+            if (bytes.Length == 0)
+                return BadRequest(new { message = "Image is empty." });
+
+            if (bytes.Length > MaxImageSizeBytes)
+                return BadRequest(new { message = "Image must be smaller than 10 MB." });
+
+            var mimeType = request.MimeType ?? "image/jpeg";
+            var fileName = request.FileName ?? "profile.jpg";
+
+            var currentSettings = await _settingsService.GetSettingsByRegNoAsync(regNo.Value);
+            var oldImageUrl = currentSettings?.ProfileImage;
+
+            using var stream = new MemoryStream(bytes);
+            var publicUrl = await _storageService.UploadProfileImageAsync(
+                regNo.Value, stream, fileName, mimeType);
+
+            var saved = await _settingsService.UpdateProfileImageAsync(regNo.Value, publicUrl);
+
+            // Compare paths without ?v= cache-bust param — same path means same file, don't delete
+            if (saved && oldImageUrl != null &&
+                oldImageUrl.Split('?')[0] != publicUrl.Split('?')[0])
+                await _storageService.DeleteProfileImageAsync(oldImageUrl);
+
+            return Ok(new { success = saved, imageUrl = publicUrl });
+        }
+
+        // Diagnostic — tests Supabase Storage connection, lists buckets/objects, tries test upload
+        [HttpGet("storage-check")]
+        public async Task<IActionResult> CheckStorage()
+        {
+            var result = await _storageService.CheckStorageAsync();
+            return Ok(result);
         }
 
         [HttpPut("account-details")]

@@ -9,5 +9,6 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
     Task<TodayLeafDto> GetTodayLeafCollectionAsync(int regNo);
     Task<decimal> GetCurrentMonthTotalAsync(int regNo);
     Task<Dictionary<int, LeafCollectionDto>> GetLeafDataByMonthAsync(int regNo, int year, int month);
+    Task<object> GetDiagnosticsAsync(int regNo);
 }
 }

@@ -77,7 +77,14 @@ namespace TeaFactorySupplierManagement.Application.Mappings
             CreateMap<UserSettings, UserSettingsDto>()
                 .ForMember(dest => dest.Theme, opt => opt.MapFrom(src => src.Theme ?? "light"))
                 .ForMember(dest => dest.Language, opt => opt.MapFrom(src => src.Language ?? "english"))
-                .ForMember(dest => dest.FontSize, opt => opt.MapFrom(src => src.FontSize ?? 50));
+                .ForMember(dest => dest.FontSize, opt => opt.MapFrom(src => src.FontSize ?? 50))
+                .ForMember(dest => dest.ProfileImage, opt => opt.MapFrom(src => src.ProfileImage))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+                .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
+                .ForMember(dest => dest.BankName, opt => opt.MapFrom(src => src.BankName))
+                .ForMember(dest => dest.AccountNumber, opt => opt.MapFrom(src => src.AccountNumber))
+                .ForMember(dest => dest.AccountHolder, opt => opt.MapFrom(src => src.AccountHolder))
+                .ForMember(dest => dest.Branch, opt => opt.MapFrom(src => src.Branch));
 
             // FIXED: Only map non-null values from DTO to Entity
             CreateMap<UpdateSettingsDto, UserSettings>()

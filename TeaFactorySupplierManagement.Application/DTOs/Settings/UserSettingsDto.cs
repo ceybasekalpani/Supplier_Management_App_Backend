@@ -31,4 +31,11 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Settings
     {
         public string ProfileImage { get; set; } = string.Empty;
     }
+
+    public class UpdateProfileImageBase64Dto
+    {
+        public string ImageBase64 { get; set; } = string.Empty;
+        public string? MimeType { get; set; }
+        public string? FileName { get; set; }
+    }
 }

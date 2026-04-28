@@ -14,86 +14,67 @@ namespace TeaFactorySupplierManagement.API.Controllers
         public LeafController(ILeafService leafService)
         {
             _leafService = leafService;
-        }                                                                                                                                                                                                                                  
-
-        [HttpGet("monthly/{regNo}/{year}/{month}")]
-        public async Task<IActionResult> GetMonthlyCollection(int regNo, int year, int month)
-        {
-            var result = await _leafService.GetMonthlyLeafCollectionAsync(regNo, year, month);
-            return Ok(result);
         }
 
-        [HttpGet("history/{regNo}")]
-        public async Task<IActionResult> GetHistory(int regNo)
+        private int? GetCurrentRegNo()
         {
-            var result = await _leafService.GetSixMonthHistoryAsync(regNo);
-            return Ok(result);
+            var claim = User.FindFirst("RegNo")?.Value;
+            return int.TryParse(claim, out int regNo) ? regNo : null;
         }
 
-        [HttpGet("today/{regNo}")]
-        public async Task<IActionResult> GetTodayCollection(int regNo)
-        {
-            var result = await _leafService.GetTodayLeafCollectionAsync(regNo);
-            return Ok(result);
-        }
-
-        [HttpGet("summary/{regNo}")]
-        public async Task<IActionResult> GetCurrentMonthSummary(int regNo)
-        {
-            var total = await _leafService.GetCurrentMonthTotalAsync(regNo);
-            return Ok(new { totalNet = total });
-        }
-
-        [HttpGet("my")]
+        // Monthly leaf collection for logged-in supplier
+        [HttpGet("monthly")]
         public async Task<IActionResult> GetMyMonthlyCollection([FromQuery] int year, [FromQuery] int month)
         {
-            var regNoClaim = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
-            {
-                return Unauthorized();
-            }
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
 
-            var result = await _leafService.GetMonthlyLeafCollectionAsync(regNo, year, month);
+            var result = await _leafService.GetMonthlyLeafCollectionAsync(regNo.Value, year, month);
             return Ok(result);
         }
 
-        [HttpGet("my-history")]
+        // 6-month history for logged-in supplier
+        [HttpGet("history")]
         public async Task<IActionResult> GetMyHistory()
         {
-            var regNoClaim = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
-            {
-                return Unauthorized();
-            }
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
 
-            var result = await _leafService.GetSixMonthHistoryAsync(regNo);
+            var result = await _leafService.GetSixMonthHistoryAsync(regNo.Value);
             return Ok(result);
         }
 
-        [HttpGet("my-today")]
+        // Today's collection for logged-in supplier
+        [HttpGet("today")]
         public async Task<IActionResult> GetMyTodayCollection()
         {
-            var regNoClaim = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
-            {
-                return Unauthorized();
-            }
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
 
-            var result = await _leafService.GetTodayLeafCollectionAsync(regNo);
+            var result = await _leafService.GetTodayLeafCollectionAsync(regNo.Value);
             return Ok(result);
         }
 
-        [HttpGet("my-summary")]
+        // Current month total for logged-in supplier
+        [HttpGet("summary")]
         public async Task<IActionResult> GetMyCurrentMonthSummary()
         {
-            var regNoClaim = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
-            {
-                return Unauthorized();
-            }
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
 
-            var total = await _leafService.GetCurrentMonthTotalAsync(regNo);
+            var total = await _leafService.GetCurrentMonthTotalAsync(regNo.Value);
             return Ok(new { totalNet = total });
+        }
+
+        // Diagnostic — shows raw DB data to debug zero-value issues
+        [HttpGet("debug")]
+        public async Task<IActionResult> GetDebug()
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
+
+            var result = await _leafService.GetDiagnosticsAsync(regNo.Value);
+            return Ok(result);
         }
     }
 }

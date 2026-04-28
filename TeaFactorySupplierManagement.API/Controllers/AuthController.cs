@@ -10,10 +10,12 @@ namespace TeaFactorySupplierManagement.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ISettingsService _settingsService;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ISettingsService settingsService)
         {
             _authService = authService;
+            _settingsService = settingsService;
         }
 
         [HttpPost("login")]
@@ -38,13 +40,15 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var regNo = User.FindFirst("RegNo")?.Value;
-            if (string.IsNullOrEmpty(regNo))
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
                 return Unauthorized();
 
-            var supplier = await _authService.GetSupplierByRegNoAsync(regNo);
+            var supplier = await _authService.GetSupplierByRegNoAsync(regNoClaim);
             if (supplier == null)
                 return NotFound();
+
+            var settings = await _settingsService.GetSettingsByRegNoAsync(regNo);
 
             return Ok(new
             {
@@ -52,7 +56,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 name = supplier.RegName,
                 phone = supplier.TelNo,
                 address = supplier.Address,
-                idNo = supplier.IDNo
+                idNo = supplier.IDNo,
+                profileImage = settings?.ProfileImage
             });
         }
 
