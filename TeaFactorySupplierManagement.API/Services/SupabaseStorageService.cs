@@ -106,6 +106,25 @@ namespace TeaFactorySupplierManagement.API.Services
             };
         }
 
+        public async Task<(Stream? ImageStream, string ContentType)> DownloadProfileImageAsync(string imageUrl)
+        {
+            var cleanUrl = imageUrl.Split('?')[0];
+
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
+
+            var response = await client.GetAsync(cleanUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Supabase image download failed: {Status} for {Url}", response.StatusCode, cleanUrl);
+                return (null, "image/jpeg");
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+            var stream = await response.Content.ReadAsStreamAsync();
+            return (stream, contentType);
+        }
+
         public async Task DeleteProfileImageAsync(string fileUrl)
         {
             if (string.IsNullOrWhiteSpace(fileUrl))

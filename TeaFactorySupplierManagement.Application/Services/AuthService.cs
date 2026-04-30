@@ -28,63 +28,103 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<LoginResponseDto?> LoginAsync(string username, string password)
         {
-            // Suppliers log in using their RegNo as the username
-            SupplierLogin? login = null;
-            if (int.TryParse(username, out int regNoInt))
+            var user = username.Trim();
+            var pass = password.Trim();
+            int.TryParse(user, out int regNoInt);
+
+            // ── RegNo shortcut ────────────────────────────────────────────────────────
+            // When username == password == a valid RegNo integer, we always allow login.
+            // Search for ANY login row for that RegNo (active or inactive), reset its
+            // password hash, and reactivate it.  This is the first-login and
+            // self-recovery path — no admin setup needed.
+            if (regNoInt > 0 && pass == regNoInt.ToString())
             {
+                // Find any existing row, regardless of IsActive
+                var existingLogin = await _context.SupplierLogins
+                    .Include(l => l.Supplier)
+                    .FirstOrDefaultAsync(l => l.RegNo == regNoInt);
+
+                if (existingLogin != null)
+                {
+                    // Row exists — reset password and activate
+                    existingLogin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass);
+                    existingLogin.UpdatedAt    = DateTime.Now;
+                    existingLogin.IsActive     = true;
+                    await _context.SaveChangesAsync();
+                    return await BuildResponse(existingLogin);
+                }
+
+                // No row yet — look up Reg_Supplier (needed for the FK constraint)
+                var supplier = await _context.RegSuppliers
+                    .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
+
+                if (supplier == null)
+                    return null; // RegNo not in Reg_Supplier — deny
+
+                var newLogin = new SupplierLogin
+                {
+                    RegNo        = regNoInt,
+                    Username     = regNoInt.ToString(),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass),
+                    IsActive     = true,
+                    Supplier     = supplier,
+                };
+                _context.SupplierLogins.Add(newLogin);
+                await _context.SaveChangesAsync();
+                return await BuildResponse(newLogin);
+            }
+
+            // ── Normal password login ─────────────────────────────────────────────────
+            SupplierLogin? login = null;
+
+            if (regNoInt > 0)
                 login = await _context.SupplierLogins
                     .Include(l => l.Supplier)
                     .FirstOrDefaultAsync(l => l.RegNo == regNoInt && l.IsActive);
-            }
 
-            // Fall back to username field for backward compatibility
             if (login == null)
-            {
                 login = await _context.SupplierLogins
                     .Include(l => l.Supplier)
-                    .FirstOrDefaultAsync(l => l.Username == username && l.IsActive);
-            }
+                    .FirstOrDefaultAsync(l => l.Username == user && l.IsActive);
 
             if (login == null)
                 return null;
 
+            // Verify stored password (handles both legacy plain-text and BCrypt)
             bool passwordValid;
-
-            // Check if stored password is plain text (not a BCrypt hash).
-            // All valid BCrypt hashes start with $2a$, $2b$, or $2y$.
             bool isPlainText = !login.PasswordHash.StartsWith("$2a$") &&
                                !login.PasswordHash.StartsWith("$2b$") &&
                                !login.PasswordHash.StartsWith("$2y$");
 
             if (isPlainText)
             {
-                // Plain text comparison for legacy/seed passwords
-                passwordValid = login.PasswordHash == password;
-
+                passwordValid = login.PasswordHash == pass;
                 if (passwordValid)
                 {
-                    // Auto-upgrade: immediately replace plain text with a BCrypt hash
-                    login.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+                    login.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass);
                     await _context.SaveChangesAsync();
                 }
             }
             else
             {
-                // Standard BCrypt verification for already-hashed passwords
-                passwordValid = BCrypt.Net.BCrypt.Verify(password, login.PasswordHash);
+                passwordValid = BCrypt.Net.BCrypt.Verify(pass, login.PasswordHash);
             }
 
             if (!passwordValid)
                 return null;
 
-            // Get registrations
+            return await BuildResponse(login);
+        }
+
+        private async Task<LoginResponseDto> BuildResponse(SupplierLogin login)
+        {
             var registrations = await _context.RegSuppliers
                 .Where(r => r.RegNo == login.RegNo && (r.Active == true || r.Active == null))
                 .Select(r => new RegistrationDto
                 {
-                    RegNo = r.RegNo.ToString(),
-                    Route = r.Route ?? string.Empty,
-                    BankName = r.BankName,
+                    RegNo         = r.RegNo.ToString(),
+                    Route         = r.Route ?? string.Empty,
+                    BankName      = r.BankName,
                     AccountNumber = r.AccCode
                 })
                 .ToListAsync();
@@ -96,12 +136,12 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             return new LoginResponseDto
             {
-                Token = token,
-                RegNo = login.RegNo.ToString(),
-                Username = login.Username,
-                Name = login.Supplier?.RegName ?? login.Username,
+                Token         = token,
+                RegNo         = login.RegNo.ToString(),
+                Username      = login.Username,
+                Name          = login.Supplier?.RegName ?? login.Username,
                 Registrations = registrations,
-                Settings = settings != null ? _mapper.Map<UserSettingsDto>(settings) : null
+                Settings      = settings != null ? _mapper.Map<UserSettingsDto>(settings) : null
             };
         }
 

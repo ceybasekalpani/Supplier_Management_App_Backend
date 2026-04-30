@@ -57,7 +57,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 phone = supplier.TelNo,
                 address = supplier.Address,
                 idNo = supplier.IDNo,
-                profileImage = settings?.ProfileImage
+                profileImage = settings?.ProfileImage,
+                settings
             });
         }
 

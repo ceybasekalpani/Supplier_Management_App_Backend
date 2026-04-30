@@ -19,23 +19,25 @@ namespace TeaFactorySupplierManagement.Application.Services
         }
 
         public async Task<UserSettingsDto?> GetSettingsByRegNoAsync(int regNo)
-        {
-            var settings = await _context.UserSettings
-                .AsNoTracking() // Better for read-only operations
-                .FirstOrDefaultAsync(s => s.RegNo == regNo);
+            {
+                var settings = await _context.UserSettings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.RegNo == regNo);
 
-            if (settings == null)
-                return null;
+                if (settings == null)
+                    return null;
 
-            var dto = _mapper.Map<UserSettingsDto>(settings);
+                var dto = _mapper.Map<UserSettingsDto>(settings);
 
-            // Ensure default values for nulls
-            dto.Theme ??= "light";
-            dto.Language ??= "english";
-            dto.FontSize ??= 50;
+                // Manual assignment if AutoMapper fails for any reason
+                dto.ProfileImage = settings.ProfileImage; 
+                
+                dto.Theme ??= "light";
+                dto.Language ??= "english";
+                dto.FontSize ??= 50;
 
-            return dto;
-        }
+                return dto;
+            }
 
         public async Task<UserSettingsDto> CreateOrUpdateSettingsAsync(int regNo, UpdateSettingsDto settings)
         {
