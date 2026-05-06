@@ -136,26 +136,6 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(new { success = saved, imageUrl = publicUrl });
         }
 
-        // Downloads the profile image from Supabase using the service role key and streams it
-        // to the client. This bypasses any Supabase bucket visibility setting — the app always
-        // uses this endpoint so bucket public/private config doesn't matter.
-        [HttpGet("profile-image")]
-        public async Task<IActionResult> DownloadProfileImage()
-        {
-            var regNo = GetCurrentRegNo();
-            if (regNo == null) return Unauthorized();
-
-            var settings = await _settingsService.GetSettingsByRegNoAsync(regNo.Value);
-            if (string.IsNullOrEmpty(settings?.ProfileImage))
-                return NotFound(new { message = "No profile image saved." });
-
-            var (stream, contentType) = await _storageService.DownloadProfileImageAsync(settings.ProfileImage);
-            if (stream == null)
-                return NotFound(new { message = "Image could not be fetched from storage." });
-
-            return File(stream, contentType);
-        }
-
         // Diagnostic — tests Supabase Storage connection, lists buckets/objects, tries test upload
         [HttpGet("storage-check")]
         public async Task<IActionResult> CheckStorage()
