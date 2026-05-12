@@ -52,11 +52,12 @@ namespace TeaFactorySupplierManagement.Application.Services
             cashRequest.RegNo = regNo;
             cashRequest.RequestNo = requestNo;
 
-            // Auto-set all date/time/month fields from server local time — not from user input
             cashRequest.RequestDate = now.Date;
             cashRequest.RequestTime = now.TimeOfDay;
-            cashRequest.Month = now.ToString("MMMM yyyy");                          // e.g. "March 2026"
-            cashRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);        // e.g. 2026-03-01
+            cashRequest.Month = !string.IsNullOrWhiteSpace(request.Month)
+                ? request.Month
+                : now.ToString("MMMM yyyy");
+            cashRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);
             cashRequest.Status = "pending";
 
             _context.CashRequests.Add(cashRequest);
@@ -102,6 +103,12 @@ namespace TeaFactorySupplierManagement.Application.Services
         {
             var factorySetup = await _context.FactorySetups.FirstOrDefaultAsync();
             return factorySetup?.IsCashRequest ?? true;
+        }
+
+        public async Task<decimal?> GetAdvanceLimitAsync()
+        {
+            var factorySetup = await _context.FactorySetups.FirstOrDefaultAsync();
+            return factorySetup?.AdvanceLimit;
         }
 
         private async Task<string> GenerateRequestNumberAsync(string requestType)

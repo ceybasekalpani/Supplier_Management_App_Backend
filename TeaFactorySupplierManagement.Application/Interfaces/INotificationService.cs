@@ -8,5 +8,6 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
     Task<int> GetUnreadCountAsync(int regNo);
     Task MarkAsReadAsync(int notificationId, int regNo);
     Task MarkAllAsReadAsync(int regNo);
+    Task DismissAsync(int notificationId, int regNo);
 }
 }

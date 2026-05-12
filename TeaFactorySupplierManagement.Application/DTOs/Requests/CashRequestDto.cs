@@ -24,6 +24,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
     {
         public string RequestType { get; set; } = string.Empty;
         public decimal Amount { get; set; }
+        public string? Month { get; set; }
     }
 
     public class UpdateCashRequestDto

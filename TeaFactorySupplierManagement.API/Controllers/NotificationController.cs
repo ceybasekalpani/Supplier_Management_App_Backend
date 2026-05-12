@@ -59,6 +59,17 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(new { message = "Notification marked as read" });
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DismissNotification(int id)
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
+
+            await _notificationService.DismissAsync(id, regNo.Value);
+            return Ok(new { message = "Notification dismissed" });
+        }
+
         [HttpPost("mark-all-read")]
         public async Task<IActionResult> MarkAllAsRead()
         {

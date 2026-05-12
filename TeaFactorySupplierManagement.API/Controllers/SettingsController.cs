@@ -136,6 +136,23 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(new { success = saved, imageUrl = publicUrl });
         }
 
+        [HttpGet("profile-image")]
+        public async Task<IActionResult> GetProfileImage()
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
+
+            var settings = await _settingsService.GetSettingsByRegNoAsync(regNo.Value);
+            if (string.IsNullOrEmpty(settings?.ProfileImage))
+                return NotFound(new { message = "No profile image found." });
+
+            var (stream, contentType) = await _storageService.DownloadProfileImageAsync(settings.ProfileImage);
+            if (stream == null)
+                return NotFound(new { message = "Image could not be retrieved from storage." });
+
+            return File(stream, contentType);
+        }
+
         // Diagnostic — tests Supabase Storage connection, lists buckets/objects, tries test upload
         [HttpGet("storage-check")]
         public async Task<IActionResult> CheckStorage()

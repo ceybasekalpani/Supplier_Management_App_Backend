@@ -56,11 +56,20 @@ namespace TeaFactorySupplierManagement.Application.Services
                 if (settings.FontSize.HasValue)
                     existingSettings.FontSize = settings.FontSize;
 
+                if (settings.Name != null)
+                    existingSettings.Name = settings.Name;
+
                 if (settings.Address != null)
                     existingSettings.Address = settings.Address;
 
                 if (settings.Phone != null)
                     existingSettings.Phone = settings.Phone;
+
+                if (settings.Phone2 != null)
+                    existingSettings.Phone2 = settings.Phone2;
+
+                if (settings.Phone3 != null)
+                    existingSettings.Phone3 = settings.Phone3;
 
                 if (settings.BankName != null)
                     existingSettings.BankName = settings.BankName;
@@ -86,14 +95,17 @@ namespace TeaFactorySupplierManagement.Application.Services
                     Theme = settings.Theme ?? "light",
                     Language = settings.Language ?? "english",
                     FontSize = settings.FontSize ?? 50,
+                    Name = settings.Name,
                     Address = settings.Address,
                     Phone = settings.Phone,
+                    Phone2 = settings.Phone2,
+                    Phone3 = settings.Phone3,
                     BankName = settings.BankName,
                     AccountNumber = settings.AccountNumber,
                     AccountHolder = settings.AccountHolder,
                     Branch = settings.Branch,
                     ProfileImage = null,
-                    CreatedAt = DateTime.Now, // Sri Lanka time
+                    CreatedAt = DateTime.Now,
                     UpdatedAt = null
                 };
                 _context.UserSettings.Add(existingSettings);
@@ -145,40 +157,37 @@ namespace TeaFactorySupplierManagement.Application.Services
                 settings = new UserSettings
                 {
                     RegNo = regNo,
+                    Name = accountDetails.Name, // Added Name
+                    Address = accountDetails.Address,
+                    Phone = accountDetails.Phone,
+                    Phone2 = accountDetails.Phone2, // Added Phone 2
+                    Phone3 = accountDetails.Phone3, // Added Phone 3
                     BankName = accountDetails.BankName,
                     AccountNumber = accountDetails.AccountNumber,
                     AccountHolder = accountDetails.AccountHolder,
                     Branch = accountDetails.Branch,
-                    Address = accountDetails.Address, // FIXED: Include Address
-                    Phone = accountDetails.Phone,     // FIXED: Include Phone
                     Theme = "light",
                     Language = "english",
                     FontSize = 50,
-                    CreatedAt = DateTime.Now, // Sri Lanka time
-                    UpdatedAt = null
+                    CreatedAt = DateTime.Now
                 };
                 _context.UserSettings.Add(settings);
             }
             else
             {
                 // Update only provided fields
-                if (accountDetails.BankName != null)
-                    settings.BankName = accountDetails.BankName;
+                // Update Name and all 3 Phone Numbers
+                if (accountDetails.Name != null) settings.Name = accountDetails.Name;
+                if (accountDetails.Address != null) settings.Address = accountDetails.Address;
+                if (accountDetails.Phone != null) settings.Phone = accountDetails.Phone;
+                if (accountDetails.Phone2 != null) settings.Phone2 = accountDetails.Phone2;
+                if (accountDetails.Phone3 != null) settings.Phone3 = accountDetails.Phone3;
 
-                if (accountDetails.AccountNumber != null)
-                    settings.AccountNumber = accountDetails.AccountNumber;
-
-                if (accountDetails.AccountHolder != null)
-                    settings.AccountHolder = accountDetails.AccountHolder;
-
-                if (accountDetails.Branch != null)
-                    settings.Branch = accountDetails.Branch;
-
-                if (accountDetails.Address != null)
-                    settings.Address = accountDetails.Address;
-
-                if (accountDetails.Phone != null)
-                    settings.Phone = accountDetails.Phone;
+                // Bank info
+                if (accountDetails.BankName != null) settings.BankName = accountDetails.BankName;
+                if (accountDetails.AccountNumber != null) settings.AccountNumber = accountDetails.AccountNumber;
+                if (accountDetails.AccountHolder != null) settings.AccountHolder = accountDetails.AccountHolder;
+                if (accountDetails.Branch != null) settings.Branch = accountDetails.Branch;
 
                 settings.UpdatedAt = DateTime.Now; // Sri Lanka time
                 _context.Entry(settings).State = EntityState.Modified;

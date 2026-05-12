@@ -24,6 +24,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
     {
         public string ItemType { get; set; } = string.Empty;
         public int Quantity { get; set; }
+        public string? Month { get; set; }
     }
 
     public class UpdateItemRequestDto

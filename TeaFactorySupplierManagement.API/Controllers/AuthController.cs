@@ -55,6 +55,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 regNo = supplier.RegNo,
                 name = supplier.RegName,
                 phone = supplier.TelNo,
+                phone2 = supplier.TelNo_2,
+                phone3 = supplier.TelNo_3,
                 address = supplier.Address,
                 idNo = supplier.IDNo,
                 profileImage = settings?.ProfileImage,

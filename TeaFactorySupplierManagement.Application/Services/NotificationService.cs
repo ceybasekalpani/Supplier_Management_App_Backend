@@ -40,16 +40,24 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             var readSet = new HashSet<int>(readNotificationIds);
 
-            // Fixed: Use proper null handling for each notification
-            return notifications.Select(notification => new NotificationDto
-            {
-                Id = notification.Id,
-                Title = notification.Title ?? string.Empty,
-                Message = notification.Message ?? string.Empty,
-                Type = notification.Type ?? "info",
-                CreatedAt = notification.CreatedAt,
-                IsRead = readSet.Contains(notification.Id)
-            }).ToList();
+            var dismissedNotificationIds = await _context.NotificationDismissed
+                .Where(nd => nd.RegNo == regNo)
+                .Select(nd => nd.NotificationId)
+                .ToListAsync();
+
+            var dismissedSet = new HashSet<int>(dismissedNotificationIds);
+
+            return notifications
+                .Where(n => !dismissedSet.Contains(n.Id))
+                .Select(notification => new NotificationDto
+                {
+                    Id = notification.Id,
+                    Title = notification.Title ?? string.Empty,
+                    Message = notification.Message ?? string.Empty,
+                    Type = notification.Type ?? "info",
+                    CreatedAt = notification.CreatedAt,
+                    IsRead = readSet.Contains(notification.Id)
+                }).ToList();
         }
 
         public async Task<int> GetUnreadCountAsync(int regNo)
@@ -75,6 +83,29 @@ namespace TeaFactorySupplierManagement.Application.Services
                     NotificationId = notificationId,
                     RegNo = regNo,
                     ReadAt = DateTime.Now
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task DismissAsync(int notificationId, int regNo)
+        {
+            var notification = await _context.Notifications.FindAsync(notificationId);
+            if (notification == null)
+                throw new ArgumentException($"Notification with ID {notificationId} not found");
+
+            var exists = await _context.NotificationDismissed
+                .AnyAsync(nd => nd.NotificationId == notificationId && nd.RegNo == regNo);
+
+            if (!exists)
+            {
+                _context.NotificationDismissed.Add(new NotificationDismissed
+                {
+                    NotificationId = notificationId,
+                    RegNo = regNo,
+                    DismissedAt = DateTime.Now,
+                    Title = notification.Title ?? string.Empty,
+                    Message = notification.Message ?? string.Empty
                 });
                 await _context.SaveChangesAsync();
             }

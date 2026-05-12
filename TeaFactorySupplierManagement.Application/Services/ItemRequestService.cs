@@ -53,7 +53,9 @@ namespace TeaFactorySupplierManagement.Application.Services
             itemRequest.RequestNo = requestNo;
             itemRequest.RequestDate = now.Date;
             itemRequest.RequestTime = now.TimeOfDay;
-            itemRequest.Month = now.ToString("MMMM yyyy");
+            itemRequest.Month = !string.IsNullOrWhiteSpace(request.Month)
+                ? request.Month
+                : now.ToString("MMMM yyyy");
             itemRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);
             itemRequest.Status = "pending";
             itemRequest.CreatedAt = now; // Ensure CreatedAt is set

@@ -17,5 +17,8 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public bool IsItemRequest { get; set; } = true;
 
         public bool IsFertilizerRequest { get; set; } = true;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? AdvanceLimit { get; set; }
     }
 }

@@ -132,6 +132,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public virtual ICollection<TrLeafCollectionTemp> LeafCollections { get; set; } = new List<TrLeafCollectionTemp>();
         public virtual ICollection<NewsDismissed> NewsDismissed { get; set; } = new List<NewsDismissed>();
         public virtual ICollection<NotificationRead> NotificationReads { get; set; } = new List<NotificationRead>();
+        public virtual ICollection<NotificationDismissed> NotificationDismissed { get; set; } = new List<NotificationDismissed>();
     }
 }
 

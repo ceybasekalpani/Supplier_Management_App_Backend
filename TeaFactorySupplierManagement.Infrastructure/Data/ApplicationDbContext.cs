@@ -23,6 +23,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<News> News { get; set; }
         public DbSet<NotificationRead> NotificationRead { get; set; }
+        public DbSet<NotificationDismissed> NotificationDismissed { get; set; }
         public DbSet<NewsDismissed> NewsDismissed { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<FertilizerItemStore> FertilizerItemStore { get; set; }
@@ -70,6 +71,26 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 // Configure index
+                entity.HasIndex(nd => nd.RegNo);
+            });
+
+            // Configure NotificationDismissed composite key
+            modelBuilder.Entity<NotificationDismissed>(entity =>
+            {
+                entity.HasKey(nd => new { nd.NotificationId, nd.RegNo });
+
+                entity.ToTable("Supplier_Management_Notification_Dismissed");
+
+                entity.HasOne(nd => nd.Notification)
+                    .WithMany(n => n.DismissedBy)
+                    .HasForeignKey(nd => nd.NotificationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(nd => nd.Supplier)
+                    .WithMany(s => s.NotificationDismissed)
+                    .HasForeignKey(nd => nd.RegNo)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasIndex(nd => nd.RegNo);
             });
 

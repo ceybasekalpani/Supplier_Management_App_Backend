@@ -52,7 +52,9 @@ namespace TeaFactorySupplierManagement.Application.Services
             fertilizerRequest.RequestNo = requestNo;
             fertilizerRequest.RequestDate = now.Date;
             fertilizerRequest.RequestTime = now.TimeOfDay;
-            fertilizerRequest.Month = now.ToString("MMMM yyyy");
+            fertilizerRequest.Month = !string.IsNullOrWhiteSpace(request.Month)
+                ? request.Month
+                : now.ToString("MMMM yyyy");
             fertilizerRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);
             fertilizerRequest.Status = "pending";
 

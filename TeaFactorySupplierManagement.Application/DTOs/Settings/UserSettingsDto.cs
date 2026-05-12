@@ -6,8 +6,11 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Settings
         public string? Language { get; set; }
         public int? FontSize { get; set; }
         public string? ProfileImage { get; set; }
+        public string? Name { get; set; }
         public string? Address { get; set; }
         public string? Phone { get; set; }
+        public string? Phone2 { get; set; }
+        public string? Phone3 { get; set; }
         public string? BankName { get; set; }
         public string? AccountNumber { get; set; }
         public string? AccountHolder { get; set; }
@@ -19,8 +22,11 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Settings
         public string? Theme { get; set; }
         public string? Language { get; set; }
         public int? FontSize { get; set; }
+        public string? Name { get; set; }
         public string? Address { get; set; }
         public string? Phone { get; set; }
+        public string? Phone2 { get; set; }
+        public string? Phone3 { get; set; }
         public string? BankName { get; set; }
         public string? AccountNumber { get; set; }
         public string? AccountHolder { get; set; }

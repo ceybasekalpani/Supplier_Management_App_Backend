@@ -24,6 +24,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
     {
         public string FertilizerType { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
+        public string? Month { get; set; }
     }
 
     public class UpdateFertilizerRequestDto

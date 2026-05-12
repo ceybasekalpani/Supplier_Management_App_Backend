@@ -23,8 +23,17 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         [MaxLength(500)]
         public string? Address { get; set; }
 
+        [MaxLength(200)]
+        public string? Name { get; set; }
+
         [MaxLength(15)]
         public string? Phone { get; set; }
+
+        [MaxLength(15)]
+        public string? Phone2 { get; set; }
+
+        [MaxLength(15)]
+        public string? Phone3 { get; set; }
 
         [MaxLength(100)]
         public string? BankName { get; set; }

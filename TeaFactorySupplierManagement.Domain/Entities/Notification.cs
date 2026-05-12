@@ -37,5 +37,6 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public virtual RegSupplier? TargetSupplier { get; set; }
 
         public virtual ICollection<NotificationRead> ReadBy { get; set; } = new List<NotificationRead>();
+        public virtual ICollection<NotificationDismissed> DismissedBy { get; set; } = new List<NotificationDismissed>();
     }
 }

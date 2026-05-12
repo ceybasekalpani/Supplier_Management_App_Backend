@@ -85,5 +85,12 @@ namespace TeaFactorySupplierManagement.API.Controllers
             var isEnabled = await _cashRequestService.IsCashRequestEnabledAsync();
             return Ok(new { isEnabled });
         }
+
+        [HttpGet("advance-limit")]
+        public async Task<IActionResult> GetAdvanceLimit()
+        {
+            var limit = await _cashRequestService.GetAdvanceLimitAsync();
+            return Ok(new { limit });
+        }
     }
 }
