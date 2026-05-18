@@ -10,6 +10,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Auth
         public string Name { get; set; } = string.Empty;
         public List<RegistrationDto> Registrations { get; set; } = new List<RegistrationDto>();
         public UserSettingsDto? Settings { get; set; }
+        public bool HasPinSet { get; set; }
     }
 
     public class RegistrationDto

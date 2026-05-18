@@ -104,6 +104,37 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(new { message = "Password changed successfully" });
         }
 
+        [Authorize]
+        [HttpPost("setup-pin")]
+        public async Task<IActionResult> SetupPin([FromBody] SetupPinDto request)
+        {
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
+                return Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(request.Pin) || request.Pin.Length < 4)
+                return BadRequest(new { message = "PIN must be at least 4 digits" });
+
+            var result = await _authService.SetupPinAsync(regNo, request.Pin);
+            if (!result)
+                return BadRequest(new { message = "Could not save PIN" });
+
+            return Ok(new { message = "PIN set successfully" });
+        }
+
+        [HttpPost("pin-login")]
+        public async Task<IActionResult> PinLogin([FromBody] PinLoginRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RegNo) || string.IsNullOrWhiteSpace(request.Pin))
+                return BadRequest(new { message = "RegNo and PIN are required" });
+
+            var result = await _authService.PinLoginAsync(request.RegNo, request.Pin);
+            if (result == null)
+                return Unauthorized(new { message = "Invalid PIN" });
+
+            return Ok(result);
+        }
+
         // Admin only: create initial login for a supplier using their RegNo as username
         [HttpPost("create-login")]
         public async Task<IActionResult> CreateSupplierLogin([FromBody] CreateSupplierLoginDto request)

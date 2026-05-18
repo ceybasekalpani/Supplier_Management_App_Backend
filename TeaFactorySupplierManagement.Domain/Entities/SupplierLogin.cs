@@ -18,6 +18,8 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public bool IsActive { get; set; } = true;
 
+        public string? PinHash { get; set; }
+
         [ForeignKey("RegNo")]
         public virtual RegSupplier? Supplier { get; set; }
     }

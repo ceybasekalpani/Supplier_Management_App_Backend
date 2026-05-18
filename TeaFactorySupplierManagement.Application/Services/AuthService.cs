@@ -141,7 +141,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Username      = login.Username,
                 Name          = login.Supplier?.RegName ?? login.Username,
                 Registrations = registrations,
-                Settings      = settings != null ? _mapper.Map<UserSettingsDto>(settings) : null
+                Settings      = settings != null ? _mapper.Map<UserSettingsDto>(settings) : null,
+                HasPinSet     = !string.IsNullOrEmpty(login.PinHash)
             };
         }
 
@@ -236,6 +237,34 @@ namespace TeaFactorySupplierManagement.Application.Services
             _context.SupplierLogins.Add(login);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> SetupPinAsync(int regNo, string pin)
+        {
+            var login = await _context.SupplierLogins
+                .FirstOrDefaultAsync(l => l.RegNo == regNo && l.IsActive);
+
+            if (login == null) return false;
+
+            login.PinHash  = BCrypt.Net.BCrypt.HashPassword(pin);
+            login.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<LoginResponseDto?> PinLoginAsync(string regNo, string pin)
+        {
+            if (!int.TryParse(regNo, out int regNoInt)) return null;
+
+            var login = await _context.SupplierLogins
+                .Include(l => l.Supplier)
+                .FirstOrDefaultAsync(l => l.RegNo == regNoInt && l.IsActive);
+
+            if (login == null || string.IsNullOrEmpty(login.PinHash)) return null;
+
+            if (!BCrypt.Net.BCrypt.Verify(pin, login.PinHash)) return null;
+
+            return await BuildResponse(login);
         }
 
         public string GenerateJwtToken(SupplierLogin login)

@@ -663,6 +663,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PinHash")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("RegNo")
                         .HasColumnType("int");
 

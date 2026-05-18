@@ -12,5 +12,7 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         string GenerateJwtToken(SupplierLogin login);
         Task<bool> ChangePasswordAsync(int regNo, string currentPassword, string newPassword);
         Task<bool> CreateSupplierLoginAsync(int regNo, string initialPassword);
+        Task<bool> SetupPinAsync(int regNo, string pin);
+        Task<LoginResponseDto?> PinLoginAsync(string regNo, string pin);
     }
 }
