@@ -14,5 +14,8 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         Task<bool> CreateSupplierLoginAsync(int regNo, string initialPassword);
         Task<bool> SetupPinAsync(int regNo, string pin);
         Task<LoginResponseDto?> PinLoginAsync(string regNo, string pin);
+        
+        // New Method
+        Task<bool> ChangePinAsync(int regNo, string currentPin, string newPin);
     }
 }

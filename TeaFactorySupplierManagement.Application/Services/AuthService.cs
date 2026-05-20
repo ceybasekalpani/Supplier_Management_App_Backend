@@ -32,21 +32,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             var pass = password.Trim();
             int.TryParse(user, out int regNoInt);
 
-            // ── RegNo shortcut ────────────────────────────────────────────────────────
-            // When username == password == a valid RegNo integer, we always allow login.
-            // Search for ANY login row for that RegNo (active or inactive), reset its
-            // password hash, and reactivate it.  This is the first-login and
-            // self-recovery path — no admin setup needed.
             if (regNoInt > 0 && pass == regNoInt.ToString())
             {
-                // Find any existing row, regardless of IsActive
                 var existingLogin = await _context.SupplierLogins
                     .Include(l => l.Supplier)
                     .FirstOrDefaultAsync(l => l.RegNo == regNoInt);
 
                 if (existingLogin != null)
                 {
-                    // Row exists — reset password and activate
                     existingLogin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass);
                     existingLogin.UpdatedAt    = DateTime.Now;
                     existingLogin.IsActive     = true;
@@ -54,12 +47,11 @@ namespace TeaFactorySupplierManagement.Application.Services
                     return await BuildResponse(existingLogin);
                 }
 
-                // No row yet — look up Reg_Supplier (needed for the FK constraint)
                 var supplier = await _context.RegSuppliers
                     .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
 
                 if (supplier == null)
-                    return null; // RegNo not in Reg_Supplier — deny
+                    return null; 
 
                 var newLogin = new SupplierLogin
                 {
@@ -67,6 +59,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                     Username     = regNoInt.ToString(),
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass),
                     IsActive     = true,
+                    IsCreatePin  = false, 
                     Supplier     = supplier,
                 };
                 _context.SupplierLogins.Add(newLogin);
@@ -74,7 +67,6 @@ namespace TeaFactorySupplierManagement.Application.Services
                 return await BuildResponse(newLogin);
             }
 
-            // ── Normal password login ─────────────────────────────────────────────────
             SupplierLogin? login = null;
 
             if (regNoInt > 0)
@@ -90,7 +82,6 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (login == null)
                 return null;
 
-            // Verify stored password (handles both legacy plain-text and BCrypt)
             bool passwordValid;
             bool isPlainText = !login.PasswordHash.StartsWith("$2a$") &&
                                !login.PasswordHash.StartsWith("$2b$") &&
@@ -142,7 +133,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Name          = login.Supplier?.RegName ?? login.Username,
                 Registrations = registrations,
                 Settings      = settings != null ? _mapper.Map<UserSettingsDto>(settings) : null,
-                HasPinSet     = !string.IsNullOrEmpty(login.PinHash)
+                HasPinSet     = !string.IsNullOrEmpty(login.PinHash),
+                IsCreatePin   = login.IsCreatePin 
             };
         }
 
@@ -212,14 +204,12 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<bool> CreateSupplierLoginAsync(int regNo, string initialPassword)
         {
-            // Verify the supplier exists in Reg_Supplier
             var supplier = await _context.RegSuppliers
                 .FirstOrDefaultAsync(r => r.RegNo == regNo);
 
             if (supplier == null)
                 return false;
 
-            // Remove any existing login for this RegNo first
             var existing = await _context.SupplierLogins
                 .FirstOrDefaultAsync(l => l.RegNo == regNo);
 
@@ -231,7 +221,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 RegNo = regNo,
                 Username = regNo.ToString(),
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(initialPassword),
-                IsActive = true
+                IsActive = true,
+                IsCreatePin = false
             };
 
             _context.SupplierLogins.Add(login);
@@ -247,6 +238,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (login == null) return false;
 
             login.PinHash  = BCrypt.Net.BCrypt.HashPassword(pin);
+            login.IsCreatePin = true; 
             login.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
             return true;
@@ -265,6 +257,22 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (!BCrypt.Net.BCrypt.Verify(pin, login.PinHash)) return null;
 
             return await BuildResponse(login);
+        }
+
+        // NEW METHOD
+        public async Task<bool> ChangePinAsync(int regNo, string currentPin, string newPin)
+        {
+            var login = await _context.SupplierLogins
+                .FirstOrDefaultAsync(l => l.RegNo == regNo && l.IsActive);
+
+            if (login == null || string.IsNullOrEmpty(login.PinHash)) return false;
+
+            if (!BCrypt.Net.BCrypt.Verify(currentPin, login.PinHash)) return false;
+
+            login.PinHash = BCrypt.Net.BCrypt.HashPassword(newPin);
+            login.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public string GenerateJwtToken(SupplierLogin login)

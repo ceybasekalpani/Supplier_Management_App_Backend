@@ -20,6 +20,9 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public string? PinHash { get; set; }
 
+        // New column added for checking if PIN is created
+        public bool IsCreatePin { get; set; } = false;
+
         [ForeignKey("RegNo")]
         public virtual RegSupplier? Supplier { get; set; }
     }

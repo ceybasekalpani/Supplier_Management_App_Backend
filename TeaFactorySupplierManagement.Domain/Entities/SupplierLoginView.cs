@@ -14,5 +14,8 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public string? AccCode { get; set; }
         public bool? IsSupplierActive { get; set; }
         public DateTime LoginCreatedAt { get; set; }
+        
+        // Added to view
+        public bool IsCreatePin { get; set; }
     }
 }

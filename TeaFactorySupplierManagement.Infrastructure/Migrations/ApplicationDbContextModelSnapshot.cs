@@ -659,6 +659,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsCreatePin")
+                        .HasColumnType("bit");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -697,6 +700,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.Property<string>("BankName")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsCreatePin")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsLoginActive")
                         .HasColumnType("bit");

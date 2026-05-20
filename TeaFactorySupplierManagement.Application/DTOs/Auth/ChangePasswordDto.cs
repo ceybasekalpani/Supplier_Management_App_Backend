@@ -20,4 +20,15 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Auth
         [MinLength(6)]
         public string InitialPassword { get; set; } = string.Empty;
     }
+
+    // New DTO for changing the PIN
+    public class ChangePinDto
+    {
+        [Required]
+        public string CurrentPin { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(4)]
+        public string NewPin { get; set; } = string.Empty;
+    }
 }
