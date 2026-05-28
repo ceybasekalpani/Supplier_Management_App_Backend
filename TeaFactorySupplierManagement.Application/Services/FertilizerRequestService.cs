@@ -39,10 +39,15 @@ namespace TeaFactorySupplierManagement.Application.Services
             return request != null ? _mapper.Map<FertilizerRequestDto>(request) : null;
         }
 
-        public async Task<FertilizerRequestDto> CreateRequestAsync(int regNo, CreateFertilizerRequestDto request)
+            public async Task<FertilizerRequestDto> CreateRequestAsync(int regNo, CreateFertilizerRequestDto request)
         {
             if (!await IsFertilizerRequestEnabledAsync())
                 throw new InvalidOperationException("Fertilizer request feature is not enabled");
+
+            // Validate unit
+            var validUnits = new[] { "kg", "units", "Nos" };
+            if (!validUnits.Contains(request.Unit))
+                throw new ArgumentException($"Invalid unit '{request.Unit}'. Must be one of: kg, units, Nos");
 
             var now = DateTime.Now;
             var requestNo = await GenerateRequestNumberAsync();
@@ -57,6 +62,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 : now.ToString("MMMM yyyy");
             fertilizerRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);
             fertilizerRequest.Status = "pending";
+            // Unit is mapped automatically from CreateFertilizerRequestDto via AutoMapper
 
             _context.FertilizerRequests.Add(fertilizerRequest);
             await _context.SaveChangesAsync();

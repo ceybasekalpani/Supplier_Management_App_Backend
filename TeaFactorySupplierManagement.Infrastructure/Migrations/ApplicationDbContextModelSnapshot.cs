@@ -231,6 +231,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("pending");
 
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 

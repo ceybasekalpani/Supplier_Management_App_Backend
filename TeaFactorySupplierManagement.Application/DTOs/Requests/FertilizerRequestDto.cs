@@ -6,6 +6,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
         public string RequestNo { get; set; } = string.Empty;
         public string FertilizerType { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
+        public string Unit { get; set; } = "kg"; 
         public string Month { get; set; } = string.Empty;
         public DateTime RequestMonth { get; set; }
         public DateTime RequestDate { get; set; }
@@ -25,6 +26,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
         public string FertilizerType { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
         public string? Month { get; set; }
+        public string Unit { get; set; } = "kg";
     }
 
     public class UpdateFertilizerRequestDto

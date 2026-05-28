@@ -47,5 +47,9 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         [ForeignKey("RegNo")]
         public virtual RegSupplier? Supplier { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        public string Unit { get; set; } = "kg"; 
     }
 }
