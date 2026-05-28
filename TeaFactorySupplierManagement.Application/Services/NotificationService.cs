@@ -23,11 +23,14 @@ namespace TeaFactorySupplierManagement.Application.Services
         {
             var today = DateTime.Now;
 
+            var cutoffDate = today.AddMonths(-1);
+
             var notifications = await _context.Notifications
                 .Where(n => n.IsActive &&
                             (n.StartDate == null || n.StartDate <= today) &&
                             (n.EndDate == null || n.EndDate >= today) &&
-                            (n.TargetRegNo == null || n.TargetRegNo == regNo))
+                            (n.TargetRegNo == null || n.TargetRegNo == regNo) &&
+                            n.CreatedAt >= cutoffDate)
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
                 .AsNoTracking()
