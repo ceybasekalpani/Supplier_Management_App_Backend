@@ -21,17 +21,14 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<MonthlyLeafSummaryDto> GetMonthlyLeafCollectionAsync(int regNo, int year, int month)
         {
-            // DB stores MonthName as "Mar-2026" format
             var monthName = new DateTime(year, month, 1).ToString("MMM-yyyy");
             var hasSuper = await _factorySetupService.IsSuperLeafEnabledAsync();
 
             var collections = await _context.TrLeafCollectionsTemp
-                .Where(l => l.RegNo == regNo
-                         && l.MonthName == monthName)
+                .Where(l => l.RegNo == regNo && l.MonthName == monthName)
                 .OrderBy(l => l.DayNo)
                 .ToListAsync();
 
-            // Group all records by day and aggregate — one entry per day regardless of shifts
             var grouped = collections
                 .Where(c => (c.DayNo ?? 0) > 0)
                 .GroupBy(c => c.DayNo!.Value)
@@ -91,14 +88,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             };
         }
 
-        public async Task<List<SixMonthHistoryDto>> GetSixMonthHistoryAsync(int regNo)
+        // ── Shared helper — builds N months of history ─────────────────────────
+        private async Task<List<SixMonthHistoryDto>> BuildMonthHistoryAsync(int regNo, int monthCount)
         {
-            // Use local server time so month boundaries match the factory's timezone
             var today = DateTime.Now;
             var hasSuper = await _factorySetupService.IsSuperLeafEnabledAsync();
             var result = new List<SixMonthHistoryDto>();
 
-            for (int i = 5; i >= 0; i--)
+            for (int i = monthCount - 1; i >= 0; i--)
             {
                 var targetDate = today.AddMonths(-i);
                 var year = targetDate.Year;
@@ -106,8 +103,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 var monthName = targetDate.ToString("MMM-yyyy");
 
                 var collections = await _context.TrLeafCollectionsTemp
-                    .Where(l => l.RegNo == regNo
-                             && l.MonthName == monthName)
+                    .Where(l => l.RegNo == regNo && l.MonthName == monthName)
                     .ToListAsync();
 
                 decimal totalGross = 0;
@@ -143,6 +139,13 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             return result;
         }
+
+        public Task<List<SixMonthHistoryDto>> GetSixMonthHistoryAsync(int regNo)
+            => BuildMonthHistoryAsync(regNo, 6);
+
+        // NEW ─ 12-month history reuses the same helper with monthCount = 12
+        public Task<List<SixMonthHistoryDto>> GetTwelveMonthHistoryAsync(int regNo)
+            => BuildMonthHistoryAsync(regNo, 12);
 
         public async Task<TodayLeafDto> GetTodayLeafCollectionAsync(int regNo)
         {
@@ -182,8 +185,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             var monthName = DateTime.Now.ToString("MMM-yyyy");
 
             return await _context.TrLeafCollectionsTemp
-                .Where(l => l.RegNo == regNo
-                         && l.MonthName == monthName)
+                .Where(l => l.RegNo == regNo && l.MonthName == monthName)
                 .SumAsync(c => c.NetWeight ?? 0);
         }
 
@@ -199,15 +201,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .Take(5)
                 .Select(l => new
                 {
-                    l.Ind,
-                    l.RegNo,
-                    l.DayNo,
-                    l.MonthName,
+                    l.Ind, l.RegNo, l.DayNo, l.MonthName,
                     LogTime = l.LogTime.ToString(),
-                    l.Gross,
-                    l.NetWeight,
-                    l.LeafType,
-                    l.Qty
+                    l.Gross, l.NetWeight, l.LeafType, l.Qty
                 })
                 .ToListAsync();
 
@@ -242,8 +238,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             var hasSuper = await _factorySetupService.IsSuperLeafEnabledAsync();
 
             var collections = await _context.TrLeafCollectionsTemp
-                .Where(l => l.RegNo == regNo
-                         && l.MonthName == monthName)
+                .Where(l => l.RegNo == regNo && l.MonthName == monthName)
                 .ToListAsync();
 
             var result = new Dictionary<int, LeafCollectionDto>();

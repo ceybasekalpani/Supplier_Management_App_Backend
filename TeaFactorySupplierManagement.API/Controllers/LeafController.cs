@@ -44,6 +44,17 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(result);
         }
 
+        // NEW — 12-month history for logged-in supplier
+        [HttpGet("history-annual")]
+        public async Task<IActionResult> GetMyAnnualHistory()
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null) return Unauthorized();
+
+            var result = await _leafService.GetTwelveMonthHistoryAsync(regNo.Value);
+            return Ok(result);
+        }
+
         // Today's collection for logged-in supplier
         [HttpGet("today")]
         public async Task<IActionResult> GetMyTodayCollection()

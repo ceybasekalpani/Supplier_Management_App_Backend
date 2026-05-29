@@ -32,6 +32,17 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Leaf
         public int Days { get; set; }
     }
 
+    public class YearlyLeafSummaryDto
+    {
+        public int Year { get; set; }
+        public decimal TotalGross { get; set; }
+        public decimal TotalNet { get; set; }
+        public decimal TotalSuperNet { get; set; }
+        public int TotalDays { get; set; }
+        public List<MonthlyLeafSummaryDto> MonthlySummaries { get; set; } = new List<MonthlyLeafSummaryDto>();
+        public bool HasSuper { get; set; }
+    }
+    
     public class TodayLeafDto
     {
         public decimal NormalNet { get; set; }
