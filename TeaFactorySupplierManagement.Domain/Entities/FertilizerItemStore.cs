@@ -13,5 +13,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public string? ItemType { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        
     }
 }

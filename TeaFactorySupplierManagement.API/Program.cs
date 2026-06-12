@@ -1,26 +1,24 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
-using TeaFactorySupplierManagement.Infrastructure.Data;
-using TeaFactorySupplierManagement.Application.Services;
-using TeaFactorySupplierManagement.Application.Interfaces;
-using TeaFactorySupplierManagement.API.Middleware;
-using TeaFactorySupplierManagement.Infrastructure.Repositories;
-using TeaFactorySupplierManagement.Domain.Interfaces;
 using TeaFactorySupplierManagement.API.Services;
+using TeaFactorySupplierManagement.Application.Interfaces;
+using TeaFactorySupplierManagement.Application.Services;
+using TeaFactorySupplierManagement.Domain.Interfaces;
+using TeaFactorySupplierManagement.Infrastructure.Data;
+using TeaFactorySupplierManagement.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load configuration
 var configuration = builder.Configuration;
 
-// Add services to container
+// Controllers / Swagger / HTTP
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient();
 
-// Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -35,7 +33,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -43,7 +40,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Enter 'Bearer' followed by your token. Example: Bearer abc123xyz"
+        Description = "Enter: Bearer {your token}"
     });
 
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -62,12 +59,11 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add DbContext
+// Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
 
-    // Enable sensitive data logging only in development
     if (builder.Environment.IsDevelopment())
     {
         options.EnableSensitiveDataLogging();
@@ -75,69 +71,104 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     }
 });
 
-// Add AutoMapper
-// Add AutoMapper - Scan both API and Application assemblies
+// AutoMapper
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<TeaFactorySupplierManagement.Application.Mappings.MappingProfile>();
 }, AppDomain.CurrentDomain.GetAssemblies());
 
-// Configure JWT Authentication
+// JWT Authentication
 var jwtKey = configuration["Jwt:Key"];
-if (string.IsNullOrEmpty(jwtKey))
+
+if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException("JWT Key is not configured in appsettings.json");
 }
 
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication(options =>
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = true,
-        ValidIssuer = configuration["Jwt:Issuer"],
-        ValidateAudience = true,
-        ValidAudience = configuration["Jwt:Audience"],
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
-    };
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.SaveToken = true;
 
-    // Custom event handlers for JWT
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+
+            ValidateIssuer = true,
+            ValidIssuer = configuration["Jwt:Issuer"],
+
+            ValidateAudience = true,
+            ValidAudience = configuration["Jwt:Audience"],
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+
+            NameClaimType = ClaimTypes.Name,
+            RoleClaimType = ClaimTypes.Role
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
             {
-                context.Response.Headers.Add("Token-Expired", "true");
+                if (context.Exception is SecurityTokenExpiredException)
+                {
+                    context.Response.Headers["Token-Expired"] = "true";
+                }
+
+                return Task.CompletedTask;
+            },
+
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+
+                var result = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    message = "You are not authorized to access this resource"
+                });
+
+                await context.Response.WriteAsync(result);
+            },
+
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json";
+
+                var result = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    message = "You do not have permission to access this resource"
+                });
+
+                await context.Response.WriteAsync(result);
             }
-            return Task.CompletedTask;
-        },
-        OnChallenge = context =>
-        {
-            context.HandleResponse();
-            context.Response.StatusCode = 401;
-            context.Response.ContentType = "application/json";
-            var result = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                message = "You are not authorized to access this resource"
-            });
-            return context.Response.WriteAsync(result);
-        }
-    };
+        };
+    });
+
+// Authorization policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("DashboardAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("DashboardAdmin");
+    });
 });
 
-// Register Application Services
+// Application Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILeafService, LeafService>();
 builder.Services.AddScoped<ICashRequestService, CashRequestService>();
@@ -147,35 +178,49 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INewsService, NewsService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IFactorySetupService, FactorySetupService>();
+builder.Services.AddScoped<ISupplierDashboardService, SupplierDashboardService>();
+builder.Services.AddScoped<IDashboardAdminAuthService, DashboardAdminAuthService>();
+builder.Services.AddScoped<IDashboardRequestService, DashboardRequestService>();
+builder.Services.AddScoped<IDashboardMetricsService, DashboardMetricsService>();
+builder.Services.AddScoped<IFertilizerItemConfigurationService, FertilizerItemConfigurationService>();
+builder.Services.AddScoped<IDisbursementService, DisbursementService>();
+builder.Services.AddScoped<IDashboardCommunicationService, DashboardCommunicationService>();
+builder.Services.AddScoped<IDashboardUserService, DashboardUserService>();
+builder.Services.AddScoped<IDashboardPermissionService, DashboardPermissionService>();
 builder.Services.AddScoped<ISupabaseStorageService, SupabaseStorageService>();
 
-// Register Unit of Work and Repositories
+// Repositories / Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Add CORS
+// CORS
 var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? new[] { "http://localhost:8081", "http://localhost:19006", "http://localhost:19000" };
+    ?? new[]
+    {
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:8081",
+        "http://localhost:19006",
+        "http://localhost:19000"
+    };
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
         policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
-// Add Health Checks
 builder.Services.AddHealthChecks();
-
-// Add Response Caching
 builder.Services.AddResponseCaching();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// HTTP pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -188,40 +233,29 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseHsts();
-}
-
-if (!app.Environment.IsDevelopment())
-{
     app.UseHttpsRedirection();
 }
+
 app.UseResponseCaching();
 app.UseCors("AllowReactApp");
 
-// Add JWT Middleware (must be after CORS, before Authentication)
-app.UseMiddleware<JwtMiddleware>();
-
+// IMPORTANT:
+// Do not use custom JwtMiddleware here.
+// ASP.NET Core JwtBearer already handles expired tokens and authorization.
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map health checks
 app.MapHealthChecks("/health");
-
 app.MapControllers();
 
-// Ensure database is created and seeded
+// Database migration + seed
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // Ensure database exists
-        await dbContext.Database.EnsureCreatedAsync();
-
-        // Run migrations if needed
-        // await dbContext.Database.MigrateAsync();
-
-        // Seed initial data
+        await dbContext.Database.MigrateAsync();
         await DbInitializer.InitializeAsync(dbContext);
 
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();

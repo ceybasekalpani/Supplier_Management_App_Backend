@@ -6,6 +6,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
         public string RequestNo { get; set; } = string.Empty;
         public string ItemType { get; set; } = string.Empty;
         public int Quantity { get; set; }
+        public string? Unit { get; set; }
         public string Month { get; set; } = string.Empty;
         public DateTime RequestMonth { get; set; }
         public DateTime RequestDate { get; set; }
@@ -24,6 +25,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
     {
         public string ItemType { get; set; } = string.Empty;
         public int Quantity { get; set; }
+        public string? Unit { get; set; }
         public string? Month { get; set; }
     }
 

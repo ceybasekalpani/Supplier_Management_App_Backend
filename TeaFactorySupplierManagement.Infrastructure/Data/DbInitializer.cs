@@ -64,6 +64,37 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
                 });
             }
 
+            // Add first dashboard admin if none exists.
+            if (!await context.SupplierDashboardAdminLogins.AnyAsync())
+            {
+                context.SupplierDashboardAdminLogins.Add(new SupplierDashboardAdminLogin
+                {
+                    Username = "admin",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                    FullName = "Dashboard Administrator",
+                    Email = "admin@factory.local",
+                    Role = "Super Admin",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                var firstAdmin = await context.SupplierDashboardAdminLogins
+                    .OrderBy(a => a.Id)
+                    .FirstAsync();
+
+                if (string.IsNullOrWhiteSpace(firstAdmin.Role))
+                {
+                    firstAdmin.Role = "Super Admin";
+                }
+
+                if (string.IsNullOrWhiteSpace(firstAdmin.Email))
+                {
+                    firstAdmin.Email = "admin@factory.local";
+                }
+            }
+
             await context.SaveChangesAsync();
         }
     }

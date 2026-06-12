@@ -27,6 +27,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<NewsDismissed> NewsDismissed { get; set; }
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<FertilizerItemStore> FertilizerItemStore { get; set; }
+        public DbSet<SupplierDashboardAdminLogin> SupplierDashboardAdminLogins { get; set; }
+        public DbSet<SupplierDashboardAdminPermission> SupplierDashboardAdminPermissions { get; set; }
+        public DbSet<DisbursementRecord> DisbursementRecords { get; set; }
 
         // View - read-only, joined from Reg_Supplier + Supplier_Management_Login
         public DbSet<SupplierLoginView> SupplierLoginView { get; set; }
@@ -187,6 +190,34 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             modelBuilder.Entity<FactorySetup>()
                 .HasIndex(f => f.FactoryName)
                 .IsUnique();
+
+            modelBuilder.Entity<SupplierDashboardAdminLogin>(entity =>
+            {
+                entity.ToTable("supplier_dashboard_AdminLogin");
+                entity.HasIndex(a => a.Username).IsUnique();
+                entity.HasIndex(a => a.Email);
+                entity.Property(a => a.IsActive).HasDefaultValue(true);
+                entity.Property(a => a.Role).HasDefaultValue("Admin");
+                entity.HasMany(a => a.Permissions)
+                    .WithOne(p => p.Admin)
+                    .HasForeignKey(p => p.AdminId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<SupplierDashboardAdminPermission>(entity =>
+            {
+                entity.ToTable("supplier_dashboard_AdminPermissions");
+                entity.HasIndex(p => new { p.AdminId, p.ModuleId }).IsUnique();
+                entity.Property(p => p.IsEnabled).HasDefaultValue(false);
+            });
+
+            modelBuilder.Entity<DisbursementRecord>(entity =>
+            {
+                entity.ToTable("Supplier_Management_Disbursement_Records");
+                entity.HasIndex(d => new { d.IssuedType, d.RequestId }).IsUnique();
+                entity.HasIndex(d => new { d.CurrentStatus, d.IssueDate });
+                entity.HasIndex(d => d.RegNo);
+            });
 
             // Configure default values
             modelBuilder.Entity<CashRequest>()
