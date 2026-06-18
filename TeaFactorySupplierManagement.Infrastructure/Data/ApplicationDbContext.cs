@@ -30,6 +30,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<SupplierDashboardAdminLogin> SupplierDashboardAdminLogins { get; set; }
         public DbSet<SupplierDashboardAdminPermission> SupplierDashboardAdminPermissions { get; set; }
         public DbSet<DisbursementRecord> DisbursementRecords { get; set; }
+        public DbSet<MobileDeviceToken> MobileDeviceTokens { get; set; }
 
         // View - read-only, joined from Reg_Supplier + Supplier_Management_Login
         public DbSet<SupplierLoginView> SupplierLoginView { get; set; }
@@ -218,6 +219,25 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
                 entity.HasIndex(d => new { d.CurrentStatus, d.IssueDate });
                 entity.HasIndex(d => d.RegNo);
             });
+
+            modelBuilder.Entity<MobileDeviceToken>(entity =>
+            {
+                entity.ToTable("Supplier_Management_MobileDeviceTokens");
+                entity.HasIndex(x => x.FcmToken).IsUnique();
+                entity.HasIndex(x => new { x.RegNo, x.IsActive });
+                entity.Property(x => x.IsActive).HasDefaultValue(true);
+                entity.Property(x => x.LastSeenAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.HasOne(x => x.Supplier)
+                    .WithMany()
+                    .HasForeignKey(x => x.RegNo)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<News>()
+                .HasOne(n => n.TargetSupplier)
+                .WithMany()
+                .HasForeignKey(n => n.TargetRegNo)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure default values
             modelBuilder.Entity<CashRequest>()

@@ -26,7 +26,8 @@ namespace TeaFactorySupplierManagement.Application.Services
             var news = await _context.News
                 .Where(n => n.IsActive &&
                             (n.StartDate == null || n.StartDate <= today) &&
-                            (n.EndDate == null || n.EndDate >= today))
+                            (n.EndDate == null || n.EndDate >= today) &&
+                            (n.TargetRegNo == null || n.TargetRegNo == regNo))
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
                 .AsNoTracking()
@@ -47,6 +48,22 @@ namespace TeaFactorySupplierManagement.Application.Services
         }
 
         // In NewsService.cs - Update the GetActivePopupNewsAsync method
+        public async Task<NewsDto?> GetNewsByIdAsync(int newsId, int regNo)
+        {
+            var today = DateTime.Now.Date;
+            var news = await _context.News
+                .AsNoTracking()
+                .FirstOrDefaultAsync(n =>
+                    n.Id == newsId &&
+                    n.IsActive &&
+                    (n.StartDate == null || n.StartDate <= today) &&
+                    (n.EndDate == null || n.EndDate >= today) &&
+                    (n.TargetRegNo == null || n.TargetRegNo == regNo));
+
+            return news == null ? null : _mapper.Map<NewsDto>(news);
+        }
+
+        // In NewsService.cs - Update the GetActivePopupNewsAsync method
         public async Task<NewsDto?> GetActivePopupNewsAsync(int regNo)
         {
             var today = DateTime.Now.Date;
@@ -56,7 +73,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .Where(n => n.IsActive &&
                             n.ShowPopup &&
                             (n.StartDate == null || n.StartDate <= today) &&
-                            (n.EndDate == null || n.EndDate >= today))
+                            (n.EndDate == null || n.EndDate >= today) &&
+                            (n.TargetRegNo == null || n.TargetRegNo == regNo))
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
                 .AsNoTracking()

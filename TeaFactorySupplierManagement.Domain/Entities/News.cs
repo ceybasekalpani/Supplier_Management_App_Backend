@@ -25,9 +25,14 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public DateTime? EndDate { get; set; }
 
+        public int? TargetRegNo { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string CreatedBy { get; set; } = string.Empty;
+
+        [ForeignKey("TargetRegNo")]
+        public virtual RegSupplier? TargetSupplier { get; set; }
 
         // Navigation property
         public virtual ICollection<NewsDismissed> DismissedBy { get; set; } = new List<NewsDismissed>();

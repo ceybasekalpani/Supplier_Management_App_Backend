@@ -37,6 +37,21 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(news);
         }
 
+        [HttpGet("{id:int}")]
+        [HttpGet("/api/mobile/news/{id:int}")]
+        public async Task<IActionResult> GetNewsById([FromRoute] int id)
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
+
+            var news = await _newsService.GetNewsByIdAsync(id, regNo.Value);
+            if (news == null)
+                return NotFound(new { message = "News not found" });
+
+            return Ok(news);
+        }
+
         [HttpGet("active-popup")]
         public async Task<IActionResult> GetActivePopupNews()
         {

@@ -37,6 +37,21 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(notifications);
         }
 
+        [HttpGet("{id:int}")]
+        [HttpGet("/api/mobile/notifications/{id:int}")]
+        public async Task<IActionResult> GetNotificationById([FromRoute] int id)
+        {
+            var regNo = GetCurrentRegNo();
+            if (regNo == null)
+                return Unauthorized(new { message = "Invalid or missing registration number" });
+
+            var notification = await _notificationService.GetNotificationByIdAsync(id, regNo.Value);
+            if (notification == null)
+                return NotFound(new { message = "Notification not found" });
+
+            return Ok(notification);
+        }
+
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount()
         {

@@ -28,4 +28,11 @@
     <ProjectReference Include="..\TeaFactorySupplierManagement.Application\TeaFactorySupplierManagement.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="firebase-service-account.json" Condition="Exists('firebase-service-account.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

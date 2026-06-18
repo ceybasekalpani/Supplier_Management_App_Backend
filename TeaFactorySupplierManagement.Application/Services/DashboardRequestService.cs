@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Infrastructure.Data;
@@ -15,10 +16,17 @@ namespace TeaFactorySupplierManagement.Application.Services
         };
 
         private readonly ApplicationDbContext _context;
+        private readonly IFirebasePushService _firebasePushService;
+        private readonly ILogger<DashboardRequestService> _logger;
 
-        public DashboardRequestService(ApplicationDbContext context)
+        public DashboardRequestService(
+            ApplicationDbContext context,
+            IFirebasePushService firebasePushService,
+            ILogger<DashboardRequestService> logger)
         {
             _context = context;
+            _firebasePushService = firebasePushService;
+            _logger = logger;
         }
 
         public async Task<DashboardRequestsResponseDto> GetRequestsAsync(string? status, string? search, DateTime? fromDate, DateTime? toDate)
@@ -59,6 +67,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 request.UpdatedAt = now;
 
                 await _context.SaveChangesAsync();
+                await SendRequestStatusPushAsync(request.RegNo, normalizedType, request.Id, normalizedStatus);
                 return ToAdvanceRow(request);
             }
 
@@ -80,6 +89,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 request.UpdatedAt = now;
 
                 await _context.SaveChangesAsync();
+                await SendRequestStatusPushAsync(request.RegNo, normalizedType, request.Id, normalizedStatus);
                 return ToFertilizerRow(request);
             }
 
@@ -99,7 +109,26 @@ namespace TeaFactorySupplierManagement.Application.Services
             itemRequest.UpdatedAt = now;
 
             await _context.SaveChangesAsync();
+            await SendRequestStatusPushAsync(itemRequest.RegNo, normalizedType, itemRequest.Id, normalizedStatus);
             return ToItemRow(itemRequest);
+        }
+
+        private async Task SendRequestStatusPushAsync(int regNo, string requestType, int requestId, string status)
+        {
+            try
+            {
+                await _firebasePushService.SendRequestStatusChangedAsync(regNo, requestType, requestId, status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Request status was saved, but Firebase push failed. RegNo={RegNo}, RequestType={RequestType}, RequestId={RequestId}, Status={Status}.",
+                    regNo,
+                    requestType,
+                    requestId,
+                    status);
+            }
         }
 
         private async Task<List<DashboardRequestRowDto>> GetAdvanceRequestsAsync(string? status, string? search, DateTime? fromDate, DateTime? toDate)

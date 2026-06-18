@@ -69,6 +69,37 @@ namespace TeaFactorySupplierManagement.Application.Services
             return notifications.Count(n => !n.IsRead);
         }
 
+        public async Task<NotificationDto?> GetNotificationByIdAsync(int notificationId, int regNo)
+        {
+            var today = DateTime.Now;
+            var notification = await _context.Notifications
+                .AsNoTracking()
+                .FirstOrDefaultAsync(n =>
+                    n.Id == notificationId &&
+                    n.IsActive &&
+                    (n.StartDate == null || n.StartDate <= today) &&
+                    (n.EndDate == null || n.EndDate >= today) &&
+                    (n.TargetRegNo == null || n.TargetRegNo == regNo));
+
+            if (notification == null)
+            {
+                return null;
+            }
+
+            var isRead = await _context.NotificationRead
+                .AnyAsync(nr => nr.NotificationId == notificationId && nr.RegNo == regNo);
+
+            return new NotificationDto
+            {
+                Id = notification.Id,
+                Title = notification.Title ?? string.Empty,
+                Message = notification.Message ?? string.Empty,
+                Type = notification.Type ?? "general",
+                CreatedAt = notification.CreatedAt,
+                IsRead = isRead
+            };
+        }
+
         public async Task MarkAsReadAsync(int notificationId, int regNo)
         {
             // Check if notification exists

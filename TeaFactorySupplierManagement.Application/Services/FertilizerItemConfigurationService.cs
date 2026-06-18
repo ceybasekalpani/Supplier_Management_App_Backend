@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Domain.Entities;
@@ -9,10 +10,17 @@ namespace TeaFactorySupplierManagement.Application.Services
     public class FertilizerItemConfigurationService : IFertilizerItemConfigurationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IFirebasePushService _firebasePushService;
+        private readonly ILogger<FertilizerItemConfigurationService> _logger;
 
-        public FertilizerItemConfigurationService(ApplicationDbContext context)
+        public FertilizerItemConfigurationService(
+            ApplicationDbContext context,
+            IFirebasePushService firebasePushService,
+            ILogger<FertilizerItemConfigurationService> logger)
         {
             _context = context;
+            _firebasePushService = firebasePushService;
+            _logger = logger;
         }
 
         public async Task<FertilizerItemConfigurationsDto> GetAllAsync(bool includeInactive = true)
@@ -59,6 +67,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             _context.FertilizerItemStore.Add(row);
             await _context.SaveChangesAsync();
+            await SendConfigurationChangedPushAsync(normalizedCategory, row.Id, "created");
 
             return ToDto(row, normalizedCategory);
         }
@@ -85,6 +94,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             row.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
+            await SendConfigurationChangedPushAsync(normalizedCategory, row.Id, "updated");
 
             return ToDto(row, normalizedCategory);
         }
@@ -102,8 +112,26 @@ namespace TeaFactorySupplierManagement.Application.Services
             row.IsActive = isActive;
             row.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
+            await SendConfigurationChangedPushAsync(normalizedCategory, row.Id, isActive ? "activated" : "deactivated");
 
             return ToDto(row, normalizedCategory);
+        }
+
+        private async Task SendConfigurationChangedPushAsync(string category, int id, string action)
+        {
+            try
+            {
+                await _firebasePushService.SendConfigurationChangedAsync(category, id, action);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Configuration was saved, but Firebase push failed. Category={Category}, Id={Id}, Action={Action}.",
+                    category,
+                    id,
+                    action);
+            }
         }
 
         private async Task<FertilizerItemStore?> FindByCategoryAndIdAsync(string category, int id)

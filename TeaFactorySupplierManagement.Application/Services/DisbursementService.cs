@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Domain.Entities;
@@ -9,10 +10,17 @@ namespace TeaFactorySupplierManagement.Application.Services
     public class DisbursementService : IDisbursementService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IFirebasePushService _firebasePushService;
+        private readonly ILogger<DisbursementService> _logger;
 
-        public DisbursementService(ApplicationDbContext context)
+        public DisbursementService(
+            ApplicationDbContext context,
+            IFirebasePushService firebasePushService,
+            ILogger<DisbursementService> logger)
         {
             _context = context;
+            _firebasePushService = firebasePushService;
+            _logger = logger;
         }
 
         public async Task<DisbursementQueueDto> GetApprovedQueueAsync(string? route, DateTime? fromDate, DateTime? toDate)
@@ -85,6 +93,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
                 _context.DisbursementRecords.Add(record);
                 await _context.SaveChangesAsync();
+                await SendDisbursementStatusPushAsync(request.RegNo, normalizedType, request.Id, "issued");
                 return ToTrackingDto(record);
             }
 
@@ -125,6 +134,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
                 _context.DisbursementRecords.Add(record);
                 await _context.SaveChangesAsync();
+                await SendDisbursementStatusPushAsync(request.RegNo, normalizedType, request.Id, "issued");
                 return ToTrackingDto(record);
             }
 
@@ -163,7 +173,26 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             _context.DisbursementRecords.Add(itemRecord);
             await _context.SaveChangesAsync();
+            await SendDisbursementStatusPushAsync(itemRequest.RegNo, normalizedType, itemRequest.Id, "issued");
             return ToTrackingDto(itemRecord);
+        }
+
+        private async Task SendDisbursementStatusPushAsync(int regNo, string requestType, int requestId, string status)
+        {
+            try
+            {
+                await _firebasePushService.SendDisbursementStatusChangedAsync(regNo, requestType, requestId, status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Disbursement was saved, but Firebase push failed. RegNo={RegNo}, RequestType={RequestType}, RequestId={RequestId}, Status={Status}.",
+                    regNo,
+                    requestType,
+                    requestId,
+                    status);
+            }
         }
 
         public async Task<List<DisbursementTrackingDto>> GetTrackingAsync(string? issuedType, string? status, string? search, DateTime? fromDate, DateTime? toDate)

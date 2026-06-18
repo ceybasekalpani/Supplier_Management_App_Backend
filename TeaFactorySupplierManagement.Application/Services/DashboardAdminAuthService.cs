@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Domain.Entities;
@@ -15,6 +16,7 @@ namespace TeaFactorySupplierManagement.Application.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
         public DashboardAdminAuthService(ApplicationDbContext context, IConfiguration configuration)
         {
@@ -32,8 +34,12 @@ namespace TeaFactorySupplierManagement.Application.Services
                 return null;
             }
 
+            var normalizedUser = user.ToLower();
             var admin = await _context.SupplierDashboardAdminLogins
-                .FirstOrDefaultAsync(a => a.Username == user && a.IsActive);
+                .FirstOrDefaultAsync(a =>
+                    a.IsActive &&
+                    (a.Username.ToLower() == normalizedUser ||
+                     (a.Email != null && a.Email.ToLower() == normalizedUser)));
 
             if (admin == null)
             {
@@ -57,14 +63,77 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             var expiresAt = DateTime.UtcNow.AddHours(Convert.ToDouble(_configuration["Jwt:ExpiryInHours"] ?? "24"));
 
+            await DashboardPermissionService.EnsureDefaultPermissionsAsync(_context, admin);
+            var permissions = await GetPermissionsAsync(admin.Id);
+
             return new DashboardAdminLoginResponseDto
             {
                 Token = GenerateJwtToken(admin, expiresAt),
                 AdminId = admin.Id,
                 Username = admin.Username,
                 FullName = admin.FullName,
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+                IsSuperAdmin = IsSuperAdmin(admin),
+                Permissions = DashboardPermissionService.BuildPermissionKeys(permissions),
+                ModulePermissions = permissions.ModulePermissions,
+                SubPermissions = permissions.SubPermissions
             };
+        }
+
+        private async Task<DashboardUserPermissionDto> GetPermissionsAsync(int adminId)
+        {
+            var rows = await _context.SupplierDashboardAdminPermissions
+                .AsNoTracking()
+                .Where(x => x.AdminId == adminId)
+                .ToListAsync();
+
+            var dto = new DashboardUserPermissionDto();
+            foreach (var module in DashboardPermissionService.GetModules())
+            {
+                var row = rows.FirstOrDefault(x => x.ModuleId == module.Id);
+                dto.ModulePermissions[module.Id] = row?.IsEnabled ?? false;
+                dto.SubPermissions[module.Id] = ParseSubPermissions(module.Id, row?.SubPermissionsJson);
+            }
+
+            return dto;
+        }
+
+        private static List<string> ParseSubPermissions(string moduleId, string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new List<string>();
+            }
+
+            try
+            {
+                var values = JsonSerializer.Deserialize<List<string>>(json, JsonOptions) ?? new List<string>();
+                return values.Select(x => NormalizeSubPermission(moduleId, x)).Distinct().ToList();
+            }
+            catch
+            {
+                return new List<string>();
+            }
+        }
+
+        private static string NormalizeSubPermission(string moduleId, string subPermission)
+        {
+            if (subPermission.Contains('.'))
+            {
+                return subPermission;
+            }
+
+            if (subPermission.StartsWith("view_", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{moduleId}.view";
+            }
+
+            if (subPermission.StartsWith("edit_", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{moduleId}.manage";
+            }
+
+            return subPermission.Replace('_', '.');
         }
 
         private string GenerateJwtToken(SupplierDashboardAdminLogin admin, DateTime expiresAt)
@@ -106,6 +175,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             return passwordHash.StartsWith("$2a$") ||
                    passwordHash.StartsWith("$2b$") ||
                    passwordHash.StartsWith("$2y$");
+        }
+
+        private static bool IsSuperAdmin(SupplierDashboardAdminLogin admin)
+        {
+            return admin.Role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase) ||
+                   admin.Username.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+                   admin.Username.Equals("mainadmin", StringComparison.OrdinalIgnoreCase) ||
+                   admin.Username.Equals("main_admin", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

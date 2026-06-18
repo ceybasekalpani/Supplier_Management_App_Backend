@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Domain.Entities;
@@ -9,10 +10,12 @@ namespace TeaFactorySupplierManagement.Application.Services
     public class DashboardCommunicationService : IDashboardCommunicationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IFirebasePushService _firebasePushService;
 
-        public DashboardCommunicationService(ApplicationDbContext context)
+        public DashboardCommunicationService(ApplicationDbContext context, IFirebasePushService firebasePushService)
         {
             _context = context;
+            _firebasePushService = firebasePushService;
         }
 
         public async Task<CommunicationDashboardDto> GetAllAsync()
@@ -53,6 +56,9 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<DashboardNewsDto> CreateNewsAsync(CreateDashboardNewsDto request, string? createdBy)
         {
             ValidateNews(request.Title, GetNewsContent(request));
+            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var isActive = request.Active ?? request.IsActive;
 
             var now = DateTime.Now;
             var news = new News
@@ -60,10 +66,11 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Title = request.Title.Trim(),
                 Content = GetNewsContent(request),
                 Priority = request.Priority <= 0 ? 1 : request.Priority,
-                IsActive = request.IsActive,
+                IsActive = isActive,
                 ShowPopup = request.ShowPopup,
                 StartDate = request.StartDate?.Date,
                 EndDate = request.ExpiryDate?.Date,
+                TargetRegNo = targetRegNo,
                 CreatedBy = CleanActor(createdBy),
                 CreatedAt = now
             };
@@ -71,12 +78,25 @@ namespace TeaFactorySupplierManagement.Application.Services
             _context.News.Add(news);
             await _context.SaveChangesAsync();
 
+            if (ShouldPublishNow(request.PublishNow, news.IsActive, news.StartDate, news.EndDate))
+            {
+                await _firebasePushService.SendNewsAsync(
+                    news.Id,
+                    news.Title,
+                    news.Content,
+                    NormalizeAudienceType(request.AudienceType),
+                    news.TargetRegNo);
+            }
+
             return ToNewsDto(news, 0);
         }
 
         public async Task<DashboardNewsDto?> UpdateNewsAsync(int id, UpdateDashboardNewsDto request)
         {
             ValidateNews(request.Title, GetNewsContent(request));
+            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var isActive = request.Active ?? request.IsActive;
 
             var news = await _context.News.FindAsync(id);
             if (news == null)
@@ -87,10 +107,11 @@ namespace TeaFactorySupplierManagement.Application.Services
             news.Title = request.Title.Trim();
             news.Content = GetNewsContent(request);
             news.Priority = request.Priority <= 0 ? 1 : request.Priority;
-            news.IsActive = request.IsActive;
+            news.IsActive = isActive;
             news.ShowPopup = request.ShowPopup;
             news.StartDate = request.StartDate?.Date;
             news.EndDate = request.ExpiryDate?.Date;
+            news.TargetRegNo = targetRegNo;
             news.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -155,6 +176,9 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<DashboardNotificationDto> CreateNotificationAsync(CreateDashboardNotificationDto request, string? createdBy)
         {
             ValidateNotification(request.Title, request.Message);
+            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var isActive = request.Active ?? request.IsActive;
 
             var now = DateTime.Now;
             var startDate = request.Schedule ?? request.StartDate ?? now;
@@ -164,10 +188,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Message = request.Message.Trim(),
                 Type = NormalizeNotificationType(request.Type),
                 Priority = request.Priority <= 0 ? 1 : request.Priority,
-                IsActive = request.IsActive,
+                IsActive = isActive,
                 StartDate = startDate,
                 EndDate = request.EndDate,
-                TargetRegNo = request.TargetRegNo,
+                TargetRegNo = targetRegNo,
                 CreatedBy = CleanActor(createdBy),
                 CreatedAt = now
             };
@@ -175,12 +199,26 @@ namespace TeaFactorySupplierManagement.Application.Services
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
 
+            if (ShouldPublishNow(request.PublishNow, notification.IsActive, notification.StartDate, notification.EndDate))
+            {
+                await _firebasePushService.SendNotificationAsync(
+                    notification.Id,
+                    notification.Title,
+                    notification.Message,
+                    notification.Type,
+                    NormalizeAudienceType(request.AudienceType),
+                    notification.TargetRegNo);
+            }
+
             return ToNotificationDto(notification, 0, 0);
         }
 
         public async Task<DashboardNotificationDto?> UpdateNotificationAsync(int id, UpdateDashboardNotificationDto request)
         {
             ValidateNotification(request.Title, request.Message);
+            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var isActive = request.Active ?? request.IsActive;
 
             var notification = await _context.Notifications.FindAsync(id);
             if (notification == null)
@@ -192,10 +230,10 @@ namespace TeaFactorySupplierManagement.Application.Services
             notification.Message = request.Message.Trim();
             notification.Type = NormalizeNotificationType(request.Type);
             notification.Priority = request.Priority <= 0 ? 1 : request.Priority;
-            notification.IsActive = request.IsActive;
+            notification.IsActive = isActive;
             notification.StartDate = request.Schedule ?? request.StartDate;
             notification.EndDate = request.EndDate;
-            notification.TargetRegNo = request.TargetRegNo;
+            notification.TargetRegNo = targetRegNo;
             notification.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -246,6 +284,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 ShowPopup = news.ShowPopup,
                 StartDate = news.StartDate?.ToString("yyyy-MM-dd"),
                 EndDate = endDate,
+                AudienceType = news.TargetRegNo.HasValue ? "SpecificSupplier" : "AllSuppliers",
+                TargetRegNo = news.TargetRegNo,
                 CreatedBy = news.CreatedBy,
                 DismissedCount = dismissedCount
             };
@@ -270,6 +310,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 StartDate = startDate,
                 EndDate = notification.EndDate?.ToString("yyyy-MM-ddTHH:mm"),
                 TargetRegNo = notification.TargetRegNo,
+                AudienceType = notification.TargetRegNo.HasValue ? "SpecificSupplier" : "AllSuppliers",
                 CreatedBy = notification.CreatedBy,
                 ReadCount = readCount,
                 DismissedCount = dismissedCount
@@ -324,7 +365,38 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         private static string NormalizeNotificationType(string? type)
         {
-            return string.IsNullOrWhiteSpace(type) ? "info" : type.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(type))
+            {
+                return "general";
+            }
+
+            return type.Trim().ToLowerInvariant();
+        }
+
+        private static string NormalizeAudienceType(string? audienceType)
+        {
+            return string.Equals(audienceType, "SpecificSupplier", StringComparison.OrdinalIgnoreCase)
+                ? "SpecificSupplier"
+                : "AllSuppliers";
+        }
+
+        private static int? NormalizeTargetRegNo(string? audienceType, object? targetRegNo)
+        {
+            if (NormalizeAudienceType(audienceType) != "SpecificSupplier")
+            {
+                return null;
+            }
+
+            return ParseRegNo(targetRegNo);
+        }
+
+        private static bool ShouldPublishNow(bool publishNow, bool isActive, DateTime? startDate, DateTime? endDate)
+        {
+            var now = DateTime.Now;
+            return publishNow &&
+                   isActive &&
+                   (!startDate.HasValue || startDate.Value <= now) &&
+                   (!endDate.HasValue || endDate.Value >= now);
         }
 
         private static string CleanActor(string? actor)
@@ -352,6 +424,46 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 throw new ArgumentException("Notification title and message are required.");
             }
+        }
+
+        private static void ValidateAudience(string? audienceType, object? targetRegNo)
+        {
+            if (NormalizeAudienceType(audienceType) == "SpecificSupplier" && !ParseRegNo(targetRegNo).HasValue)
+            {
+                throw new ArgumentException("Target supplier registration number is required for specific supplier audience.");
+            }
+        }
+
+        private static int? ParseRegNo(object? value)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            if (value is int intValue)
+            {
+                return intValue > 0 ? intValue : null;
+            }
+
+            if (value is JsonElement jsonElement)
+            {
+                if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out var numberValue))
+                {
+                    return numberValue > 0 ? numberValue : null;
+                }
+
+                if (jsonElement.ValueKind == JsonValueKind.String)
+                {
+                    return int.TryParse(jsonElement.GetString(), out var stringNumber) && stringNumber > 0
+                        ? stringNumber
+                        : null;
+                }
+
+                return null;
+            }
+
+            return int.TryParse(Convert.ToString(value), out var parsed) && parsed > 0 ? parsed : null;
         }
     }
 }

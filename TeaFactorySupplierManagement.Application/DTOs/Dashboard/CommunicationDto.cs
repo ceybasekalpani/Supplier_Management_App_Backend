@@ -20,6 +20,8 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public bool ShowPopup { get; set; }
         public string? StartDate { get; set; }
         public string? EndDate { get; set; }
+        public string AudienceType { get; set; } = "AllSuppliers";
+        public int? TargetRegNo { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public int DismissedCount { get; set; }
     }
@@ -38,6 +40,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string? StartDate { get; set; }
         public string? EndDate { get; set; }
         public int? TargetRegNo { get; set; }
+        public string AudienceType { get; set; } = "AllSuppliers";
         public string CreatedBy { get; set; } = string.Empty;
         public int ReadCount { get; set; }
         public int DismissedCount { get; set; }
@@ -51,8 +54,12 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public DateTime? ExpiryDate { get; set; }
         public DateTime? StartDate { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool? Active { get; set; }
         public bool ShowPopup { get; set; }
         public int Priority { get; set; } = 1;
+        public bool PublishNow { get; set; } = true;
+        public string AudienceType { get; set; } = "AllSuppliers";
+        public object? TargetRegNo { get; set; }
     }
 
     public class UpdateDashboardNewsDto : CreateDashboardNewsDto
@@ -69,7 +76,10 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public DateTime? EndDate { get; set; }
         public int Priority { get; set; } = 1;
         public bool IsActive { get; set; } = true;
-        public int? TargetRegNo { get; set; }
+        public bool? Active { get; set; }
+        public object? TargetRegNo { get; set; }
+        public bool PublishNow { get; set; } = true;
+        public string AudienceType { get; set; } = "AllSuppliers";
     }
 
     public class UpdateDashboardNotificationDto : CreateDashboardNotificationDto

@@ -13,5 +13,10 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string Username { get; set; } = string.Empty;
         public string? FullName { get; set; }
         public DateTime ExpiresAt { get; set; }
+        public bool IsSuperAdmin { get; set; }
+        public bool HasPermissionData { get; set; } = true;
+        public List<string> Permissions { get; set; } = new();
+        public Dictionary<string, bool> ModulePermissions { get; set; } = new();
+        public Dictionary<string, List<string>> SubPermissions { get; set; } = new();
     }
 }

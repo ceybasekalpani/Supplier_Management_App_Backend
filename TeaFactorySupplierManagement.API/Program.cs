@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -13,6 +14,13 @@ using TeaFactorySupplierManagement.Infrastructure.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 var configuration = builder.Configuration;
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")));
 
 // Controllers / Swagger / HTTP
 builder.Services.AddControllers();
@@ -66,7 +74,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
     if (builder.Environment.IsDevelopment())
     {
-        options.EnableSensitiveDataLogging();
         options.EnableDetailedErrors();
     }
 });
@@ -187,6 +194,8 @@ builder.Services.AddScoped<IDisbursementService, DisbursementService>();
 builder.Services.AddScoped<IDashboardCommunicationService, DashboardCommunicationService>();
 builder.Services.AddScoped<IDashboardUserService, DashboardUserService>();
 builder.Services.AddScoped<IDashboardPermissionService, DashboardPermissionService>();
+builder.Services.AddScoped<IFirebasePushService, FirebasePushService>();
+builder.Services.AddScoped<IMobileDeviceTokenService, MobileDeviceTokenService>();
 builder.Services.AddScoped<ISupabaseStorageService, SupabaseStorageService>();
 
 // Repositories / Unit of Work

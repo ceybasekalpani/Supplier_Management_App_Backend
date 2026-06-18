@@ -22,11 +22,11 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var cleanSearch = search.Trim();
+                var cleanSearch = search.Trim().ToLower();
                 query = query.Where(x =>
-                    x.Username.Contains(cleanSearch) ||
-                    (x.FullName != null && x.FullName.Contains(cleanSearch)) ||
-                    (x.Email != null && x.Email.Contains(cleanSearch)));
+                    x.Username.ToLower().Contains(cleanSearch) ||
+                    (x.FullName != null && x.FullName.ToLower().Contains(cleanSearch)) ||
+                    (x.Email != null && x.Email.ToLower().Contains(cleanSearch)));
             }
 
             if (!string.IsNullOrWhiteSpace(status) && !status.Equals("all", StringComparison.OrdinalIgnoreCase))
@@ -126,18 +126,18 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         private async Task EnsureUniqueAsync(string username, string email, int? currentId)
         {
-            var cleanUsername = username.Trim();
-            var cleanEmail = email.Trim();
+            var cleanUsername = username.Trim().ToLower();
+            var cleanEmail = email.Trim().ToLower();
 
             var usernameExists = await _context.SupplierDashboardAdminLogins
-                .AnyAsync(x => x.Username == cleanUsername && (!currentId.HasValue || x.Id != currentId.Value));
+                .AnyAsync(x => x.Username.ToLower() == cleanUsername && (!currentId.HasValue || x.Id != currentId.Value));
             if (usernameExists)
             {
                 throw new InvalidOperationException("Username already exists.");
             }
 
             var emailExists = await _context.SupplierDashboardAdminLogins
-                .AnyAsync(x => x.Email == cleanEmail && (!currentId.HasValue || x.Id != currentId.Value));
+                .AnyAsync(x => x.Email != null && x.Email.ToLower() == cleanEmail && (!currentId.HasValue || x.Id != currentId.Value));
             if (emailExists)
             {
                 throw new InvalidOperationException("Email already exists.");
@@ -157,9 +157,18 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Role = user.Role,
                 Status = user.IsActive ? "active" : "inactive",
                 Avatar = user.AvatarBase64,
+                IsSuperAdmin = IsSuperAdmin(user),
                 CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd"),
                 LastLoginAt = user.LastLoginAt?.ToString("yyyy-MM-ddTHH:mm:ss")
             };
+        }
+
+        private static bool IsSuperAdmin(SupplierDashboardAdminLogin user)
+        {
+            return user.Role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase) ||
+                   user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+                   user.Username.Equals("mainadmin", StringComparison.OrdinalIgnoreCase) ||
+                   user.Username.Equals("main_admin", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void ValidateUser(string fullName, string email, string username, string? password, bool requirePassword)

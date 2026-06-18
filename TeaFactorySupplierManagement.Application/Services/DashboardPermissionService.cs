@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
@@ -95,29 +96,61 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public static async Task EnsureDefaultPermissionsAsync(ApplicationDbContext context, SupplierDashboardAdminLogin user)
         {
-            var exists = await context.SupplierDashboardAdminPermissions.AnyAsync(x => x.AdminId == user.Id);
-            if (exists)
-            {
-                return;
-            }
-
             var defaults = GetDefaultsForRole(user.Role);
-            foreach (var module in GetModules())
+            var existingModuleIds = await context.SupplierDashboardAdminPermissions
+                .Where(x => x.AdminId == user.Id)
+                .Select(x => x.ModuleId)
+                .ToListAsync();
+
+            var existing = existingModuleIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var addedRows = new List<SupplierDashboardAdminPermission>();
+
+            foreach (var module in GetModules().DistinctBy(x => x.Id))
             {
+                if (existing.Contains(module.Id))
+                {
+                    continue;
+                }
+
                 defaults.ModulePermissions.TryGetValue(module.Id, out var enabled);
                 defaults.SubPermissions.TryGetValue(module.Id, out var subs);
 
-                context.SupplierDashboardAdminPermissions.Add(new SupplierDashboardAdminPermission
+                var row = new SupplierDashboardAdminPermission
                 {
                     AdminId = user.Id,
                     ModuleId = module.Id,
                     IsEnabled = enabled,
                     SubPermissionsJson = JsonSerializer.Serialize(enabled ? subs ?? new List<string>() : new List<string>(), JsonOptions),
                     CreatedAt = DateTime.UtcNow
-                });
+                };
+
+                context.SupplierDashboardAdminPermissions.Add(row);
+                addedRows.Add(row);
+                existing.Add(module.Id);
             }
 
-            await context.SaveChangesAsync();
+            if (addedRows.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsDuplicatePermissionInsert(ex))
+            {
+                foreach (var row in addedRows)
+                {
+                    context.Entry(row).State = EntityState.Detached;
+                }
+            }
+        }
+
+        private static bool IsDuplicatePermissionInsert(DbUpdateException exception)
+        {
+            return exception.InnerException is SqlException sqlException &&
+                   sqlException.Errors.Cast<SqlError>().Any(error => error.Number is 2601 or 2627);
         }
 
         private async Task<DashboardUserPermissionDto> GetOrCreateUserPermissionsAsync(SupplierDashboardAdminLogin user)
@@ -134,7 +167,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 var row = rows.FirstOrDefault(x => x.ModuleId == module.Id);
                 dto.ModulePermissions[module.Id] = row?.IsEnabled ?? false;
-                dto.SubPermissions[module.Id] = ParseSubPermissions(row?.SubPermissionsJson);
+                dto.SubPermissions[module.Id] = NormalizeSubPermissions(module.Id, ParseSubPermissions(row?.SubPermissionsJson));
             }
 
             return dto;
@@ -149,7 +182,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             foreach (var module in modules)
             {
                 var allSubs = module.SubPermissions.Select(x => x.Id).ToList();
-                var viewSubs = allSubs.Where(x => x.StartsWith("view_", StringComparison.OrdinalIgnoreCase)).ToList();
+                var viewSubs = allSubs.Where(x => x.EndsWith(".view", StringComparison.OrdinalIgnoreCase)).ToList();
 
                 if (normalizedRole == "Super Admin" || normalizedRole == "Admin")
                 {
@@ -158,13 +191,13 @@ namespace TeaFactorySupplierManagement.Application.Services
                 }
                 else if (normalizedRole == "Support")
                 {
-                    var supportModules = new HashSet<string> { "dashboard", "suppliers", "requests", "communication" };
+                    var supportModules = new HashSet<string> { "dashboard", "suppliers", "requests", "communication", "disbursementTracking" };
                     dto.ModulePermissions[module.Id] = supportModules.Contains(module.Id);
                     dto.SubPermissions[module.Id] = supportModules.Contains(module.Id) ? viewSubs : new List<string>();
                 }
                 else
                 {
-                    var viewerModules = new HashSet<string> { "dashboard", "suppliers", "requests" };
+                    var viewerModules = new HashSet<string> { "dashboard", "suppliers", "requests", "disbursementTracking" };
                     dto.ModulePermissions[module.Id] = viewerModules.Contains(module.Id);
                     dto.SubPermissions[module.Id] = viewerModules.Contains(module.Id) ? viewSubs : new List<string>();
                 }
@@ -173,18 +206,43 @@ namespace TeaFactorySupplierManagement.Application.Services
             return dto;
         }
 
-        private static List<DashboardModuleDto> GetModules()
+        public static List<DashboardModuleDto> GetModules()
         {
             return new List<DashboardModuleDto>
             {
-                Module("dashboard", "Dashboard", "View analytics, cards, graphs, and quick actions", "view_dashboard"),
-                Module("suppliers", "Suppliers", "Manage supplier information, search, and history", "view_suppliers", "edit_suppliers", "export_suppliers"),
-                Module("requests", "Requests", "Handle advance, fertilizer and item requests with approvals", "view_requests", "approve_requests", "reject_requests", "export_requests"),
-                Module("configurations", "Configurations", "Manage fertilizer and item types", "view_configurations", "create_configurations", "edit_configurations", "delete_configurations"),
-                Module("communication", "Communication", "News and notifications management", "view_communication", "create_communication", "edit_communication", "delete_communication"),
-                Module("userManagement", "User Management", "Admin user and role management", "view_users", "create_users", "edit_users", "delete_users"),
-                Module("settings", "Settings", "System configuration and permissions", "view_settings", "edit_permissions")
+                Module("dashboard", "Dashboard", "View analytics, cards, graphs, and quick actions", "dashboard.view"),
+                Module("suppliers", "Suppliers", "Manage supplier information, search, and history", "suppliers.view", "suppliers.manage", "suppliers.export"),
+                Module("requests", "Requests", "Handle advance, fertilizer and item requests with approvals", "requests.view", "advance_requests.view", "fertilizer_requests.view", "item_requests.view", "requests.manage"),
+                Module("disbursements", "Disbursements", "Manage supplier disbursements and completed payment records", "disbursements.view", "disbursements.manage"),
+                Module("disbursementTracking", "Disbursement Tracking", "Track disbursement progress and status changes", "disbursements.view", "disbursements.manage"),
+                Module("configurations", "Configurations", "Manage fertilizer and item types", "fertilizer.manage", "items.manage", "configurations.manage"),
+                Module("communication", "Communication", "News and notifications management", "news.view", "news.manage", "notifications.view", "notifications.send"),
+                Module("userManagement", "User Management", "Admin user and role management", "users.view", "users.manage"),
+                Module("settings", "Settings", "System configuration and permissions", "permissions.view", "permissions.assign", "permissions.manage")
             };
+        }
+
+        public static List<string> BuildPermissionKeys(DashboardUserPermissionDto permissions)
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var module in GetModules())
+            {
+                if (permissions.ModulePermissions.TryGetValue(module.Id, out var enabled) && enabled)
+                {
+                    keys.Add(module.Id);
+                }
+
+                if (permissions.SubPermissions.TryGetValue(module.Id, out var subPermissions))
+                {
+                    foreach (var subPermission in subPermissions.Where(x => !string.IsNullOrWhiteSpace(x)))
+                    {
+                        keys.Add(subPermission);
+                    }
+                }
+            }
+
+            return keys.ToList();
         }
 
         private static DashboardModuleDto Module(string id, string label, string description, params string[] subPermissionIds)
@@ -220,9 +278,36 @@ namespace TeaFactorySupplierManagement.Application.Services
             }
         }
 
+        private static List<string> NormalizeSubPermissions(string moduleId, List<string> subPermissions)
+        {
+            return subPermissions.Select(x => NormalizeSubPermission(moduleId, x)).Distinct().ToList();
+        }
+
+        private static string NormalizeSubPermission(string moduleId, string subPermission)
+        {
+            if (subPermission.Contains('.'))
+            {
+                return subPermission;
+            }
+
+            const string viewPrefix = "view_";
+            if (subPermission.StartsWith(viewPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{moduleId}.view";
+            }
+
+            const string editPrefix = "edit_";
+            if (subPermission.StartsWith(editPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{moduleId}.manage";
+            }
+
+            return subPermission.Replace('_', '.');
+        }
+
         private static string ToLabel(string value)
         {
-            return string.Join(' ', value.Split('_').Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
+            return string.Join(' ', value.Split('.', '_').Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
         }
 
         private static DashboardUserDto ToUserDto(SupplierDashboardAdminLogin user)
@@ -238,9 +323,18 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Role = user.Role,
                 Status = user.IsActive ? "active" : "inactive",
                 Avatar = user.AvatarBase64,
+                IsSuperAdmin = IsSuperAdmin(user),
                 CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd"),
                 LastLoginAt = user.LastLoginAt?.ToString("yyyy-MM-ddTHH:mm:ss")
             };
+        }
+
+        private static bool IsSuperAdmin(SupplierDashboardAdminLogin user)
+        {
+            return user.Role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase) ||
+                   user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
+                   user.Username.Equals("mainadmin", StringComparison.OrdinalIgnoreCase) ||
+                   user.Username.Equals("main_admin", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
