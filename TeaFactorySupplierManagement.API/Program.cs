@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -245,6 +245,7 @@ else
     app.UseHttpsRedirection();
 }
 
+app.UseStaticFiles();
 app.UseResponseCaching();
 app.UseCors("AllowReactApp");
 
@@ -278,3 +279,4 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+

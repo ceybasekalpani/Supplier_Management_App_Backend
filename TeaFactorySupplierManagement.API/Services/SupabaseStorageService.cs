@@ -1,4 +1,5 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Text;
 using TeaFactorySupplierManagement.Application.Interfaces;
 
@@ -11,14 +12,17 @@ namespace TeaFactorySupplierManagement.API.Services
         private readonly string _bucketName;
         private readonly ILogger<SupabaseStorageService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IWebHostEnvironment _environment;
 
         public SupabaseStorageService(
             IConfiguration configuration,
             ILogger<SupabaseStorageService> logger,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            IWebHostEnvironment environment)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
+            _environment = environment;
 
             _supabaseUrl = configuration["Supabase:Url"]
                 ?? throw new InvalidOperationException("Supabase:Url is not configured.");
@@ -41,28 +45,36 @@ namespace TeaFactorySupplierManagement.API.Services
 
             var uploadUrl = $"{_supabaseUrl}/storage/v1/object/{_bucketName}/{storagePath}";
 
-            var client = _httpClientFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
-            client.DefaultRequestHeaders.Add("x-upsert", "true");
-
-            using var content = new ByteArrayContent(bytes);
-            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-
-            var response = await client.PostAsync(uploadUrl, content);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                _logger.LogError("Supabase upload failed: {Status} - {Body}", response.StatusCode, responseBody);
-                throw new InvalidOperationException($"Image upload failed: {response.StatusCode} - {responseBody}");
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
+                client.DefaultRequestHeaders.Add("x-upsert", "true");
+
+                using var content = new ByteArrayContent(bytes);
+                content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+
+                var response = await client.PostAsync(uploadUrl, content);
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Supabase upload failed: {Status} - {Body}", response.StatusCode, responseBody);
+                    throw new InvalidOperationException($"Image upload failed: {response.StatusCode} - {responseBody}");
+                }
+
+                _logger.LogInformation("Supabase upload success: {Body}", responseBody);
+
+                var publicUrl = $"{_supabaseUrl}/storage/v1/object/public/{_bucketName}/{storagePath}";
+
+                _logger.LogInformation("Public URL: {Url}", publicUrl);
+                return publicUrl;
             }
-
-            _logger.LogInformation("Supabase upload success: {Body}", responseBody);
-
-            var publicUrl = $"{_supabaseUrl}/storage/v1/object/public/{_bucketName}/{storagePath}";
-
-            _logger.LogInformation("Public URL: {Url}", publicUrl);
-            return publicUrl;
+            catch (HttpRequestException ex) when (ex.InnerException is SocketException || ex.Message.Contains("No such host", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(ex, "Supabase is unreachable. Saving profile image locally instead.");
+                return await SaveProfileImageLocallyAsync(storagePath, bytes);
+            }
         }
 
         public async Task<object> CheckStorageAsync()
@@ -110,6 +122,18 @@ namespace TeaFactorySupplierManagement.API.Services
         {
             var cleanUrl = imageUrl.Split('?')[0];
 
+            if (IsLocalProfileImageUrl(cleanUrl))
+            {
+                var localPath = GetLocalPhysicalPath(cleanUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(localPath))
+                {
+                    _logger.LogWarning("Local profile image not found: {Path}", localPath);
+                    return (null, "image/jpeg");
+                }
+
+                return (File.OpenRead(localPath), GetContentType(localPath));
+            }
+
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
 
@@ -132,6 +156,17 @@ namespace TeaFactorySupplierManagement.API.Services
 
             // Strip cache-bust param and extract path
             var cleanUrl = fileUrl.Split('?')[0];
+            if (IsLocalProfileImageUrl(cleanUrl))
+            {
+                var localPath = GetLocalPhysicalPath(cleanUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(localPath))
+                {
+                    File.Delete(localPath);
+                    _logger.LogInformation("Deleted local profile image: {Path}", localPath);
+                }
+                return;
+            }
+
             var marker = $"/storage/v1/object/public/{_bucketName}/";
             var markerIndex = cleanUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             if (markerIndex < 0)
@@ -152,6 +187,50 @@ namespace TeaFactorySupplierManagement.API.Services
             {
                 _logger.LogWarning(ex, "Failed to delete '{Path}'", storagePath);
             }
+        }
+
+        private async Task<string> SaveProfileImageLocallyAsync(string storagePath, byte[] bytes)
+        {
+            var relativePath = Path.Combine("profile-images", storagePath);
+            var physicalPath = GetLocalPhysicalPath(relativePath);
+            var directory = Path.GetDirectoryName(physicalPath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            await File.WriteAllBytesAsync(physicalPath, bytes);
+            var publicPath = "/" + relativePath.Replace(Path.DirectorySeparatorChar, '/');
+            _logger.LogInformation("Local profile image saved: {Path}", publicPath);
+            return publicPath;
+        }
+
+        private string GetLocalPhysicalPath(string relativePath)
+        {
+            var webRoot = _environment.WebRootPath;
+            if (string.IsNullOrWhiteSpace(webRoot))
+            {
+                webRoot = Path.Combine(_environment.ContentRootPath, "wwwroot");
+            }
+
+            return Path.Combine(webRoot, relativePath);
+        }
+
+        private static bool IsLocalProfileImageUrl(string imageUrl)
+        {
+            return imageUrl.StartsWith("/profile-images/", StringComparison.OrdinalIgnoreCase) ||
+                   imageUrl.StartsWith("profile-images/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetContentType(string path)
+        {
+            return Path.GetExtension(path).ToLowerInvariant() switch
+            {
+                ".png" => "image/png",
+                ".webp" => "image/webp",
+                ".gif" => "image/gif",
+                _ => "image/jpeg"
+            };
         }
     }
 }
