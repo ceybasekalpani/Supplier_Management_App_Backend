@@ -27,6 +27,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
         }
 
         [HttpGet]
+        [HttpGet("/api/mobile/news")]
         public async Task<IActionResult> GetNews()
         {
             var regNo = GetCurrentRegNo();
@@ -53,6 +54,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
         }
 
         [HttpGet("active-popup")]
+        [HttpGet("/api/mobile/news/active-popup")]
         public async Task<IActionResult> GetActivePopupNews()
         {
             var regNo = GetCurrentRegNo();
@@ -64,6 +66,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
         }
 
         [HttpPost("{id}/dismiss")]
+        [HttpPost("/api/mobile/news/{id:int}/dismiss")]
         public async Task<IActionResult> DismissNews(int id)
         {
             var regNo = GetCurrentRegNo();

@@ -106,7 +106,9 @@ namespace TeaFactorySupplierManagement.Application.Mappings
 
             CreateMap<News, NewsDto>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title ?? string.Empty))
-                .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content ?? string.Empty));
+                .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content ?? string.Empty))
+                .ForMember(dest => dest.Message, opt => opt.MapFrom(src => src.Content ?? string.Empty))
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Content ?? string.Empty));
         }
 
 
