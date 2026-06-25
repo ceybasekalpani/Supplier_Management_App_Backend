@@ -54,7 +54,9 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             cashRequest.RequestDate = now.Date;
             cashRequest.RequestTime = now.TimeOfDay;
-            cashRequest.Month = !string.IsNullOrWhiteSpace(request.Month)
+            cashRequest.Month = !string.IsNullOrWhiteSpace(request.SalaryDate)
+                ? request.SalaryDate
+                : !string.IsNullOrWhiteSpace(request.Month)
                 ? request.Month
                 : now.ToString("MMMM yyyy");
             cashRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);

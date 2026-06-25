@@ -212,7 +212,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 Module("dashboard", "Dashboard", "View analytics, cards, graphs, and quick actions", "dashboard.view"),
                 Module("suppliers", "Suppliers", "Manage supplier information, search, and history", "suppliers.view", "suppliers.manage", "suppliers.export"),
-                Module("requests", "Requests", "Handle advance, fertilizer and item requests with approvals", "requests.view", "advance_requests.view", "fertilizer_requests.view", "item_requests.view", "requests.manage"),
+                Module("requests", "Requests", "Handle advance, fertilizer and item requests with approvals", "requests.view", "advance_requests.view", "fertilizer_requests.view", "item_requests.view", "requests.manage", "requests.status_override"),
                 Module("disbursements", "Disbursements", "Manage supplier disbursements and completed payment records", "disbursements.view", "disbursements.manage"),
                 Module("disbursementTracking", "Disbursement Tracking", "Track disbursement progress and status changes", "disbursements.view", "disbursements.manage"),
                 Module("configurations", "Configurations", "Manage fertilizer and item types", "fertilizer.manage", "items.manage", "configurations.manage"),

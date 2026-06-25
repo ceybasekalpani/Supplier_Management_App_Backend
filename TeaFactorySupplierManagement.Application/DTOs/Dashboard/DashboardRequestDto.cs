@@ -5,6 +5,19 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public List<DashboardRequestRowDto> Advance { get; set; } = new();
         public List<DashboardRequestRowDto> Fertilizer { get; set; } = new();
         public List<DashboardRequestRowDto> Items { get; set; } = new();
+        public DashboardRequestReportTotalsDto Totals { get; set; } = new();
+    }
+
+    public class DashboardRequestReportTotalsDto
+    {
+        public int AdvanceCount { get; set; }
+        public int FertilizerCount { get; set; }
+        public int ItemCount { get; set; }
+        public int SupplierCount { get; set; }
+        public int TotalCount => AdvanceCount + FertilizerCount + ItemCount;
+        public decimal TotalAdvanceAmount { get; set; }
+        public decimal TotalFertilizerQuantity { get; set; }
+        public decimal TotalItemQuantity { get; set; }
     }
 
     public class DashboardRequestRowDto
@@ -18,6 +31,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public decimal? Qty { get; set; }
         public string Unit { get; set; } = string.Empty;
         public string Month { get; set; } = string.Empty;
+        public string SalaryDate { get; set; } = string.Empty;
         public string Date { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string CheckedBy { get; set; } = "-";
@@ -30,5 +44,12 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
     {
         public string Status { get; set; } = string.Empty;
         public string? Remarks { get; set; }
+    }
+
+    public class DashboardReportFileDto
+    {
+        public string FileName { get; set; } = string.Empty;
+        public string ContentType { get; set; } = string.Empty;
+        public byte[] Content { get; set; } = Array.Empty<byte>();
     }
 }

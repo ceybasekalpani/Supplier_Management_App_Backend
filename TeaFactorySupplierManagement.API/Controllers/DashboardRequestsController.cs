@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 
@@ -54,7 +55,8 @@ namespace TeaFactorySupplierManagement.API.Controllers
                     id,
                     request.Status,
                     request.Remarks,
-                    reviewedBy
+                    reviewedBy,
+                    GetCurrentDashboardAdminId()
                 );
 
                 if (updated == null)
@@ -68,6 +70,37 @@ namespace TeaFactorySupplierManagement.API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+        }
+
+        [HttpGet("export")]
+        public async Task<IActionResult> ExportRequests(
+            [FromQuery] string format = "pdf",
+            [FromQuery] string? status = null,
+            [FromQuery] string? search = null,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            try
+            {
+                var file = await _dashboardRequestService.ExportRequestsAsync(format, status, search, fromDate, toDate);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        private int? GetCurrentDashboardAdminId()
+        {
+            var adminIdClaim = User.FindFirst("DashboardAdminId")?.Value
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            return int.TryParse(adminIdClaim, out var adminId) ? adminId : null;
         }
     }
 }

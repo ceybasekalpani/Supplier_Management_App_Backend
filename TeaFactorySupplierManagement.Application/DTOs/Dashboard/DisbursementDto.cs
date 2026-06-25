@@ -52,11 +52,89 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string? CompletedDate { get; set; }
         public string? CompletedBy { get; set; }
         public string? CompletedDevice { get; set; }
+        public int? DeliveryNoteId { get; set; }
+        public string? DeliveryNoteNo { get; set; }
+        public string? DispatchedAt { get; set; }
     }
 
     public class MarkDisbursementReceivedDto
     {
         public string? CompletedBy { get; set; }
         public string? CompletedDevice { get; set; }
+    }
+
+    public class GenerateDeliveryNoteDto
+    {
+        public List<DeliveryNoteSelectionDto> Records { get; set; } = new();
+        public string BorrowerName { get; set; } = string.Empty;
+        public string BorrowerRole { get; set; } = string.Empty;
+        public string? VehicleNo { get; set; }
+        public string? RouteName { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class DeliveryNoteSelectionDto
+    {
+        public string IssuedType { get; set; } = string.Empty;
+        public int RequestId { get; set; }
+        public string? Method { get; set; }
+    }
+
+    public class DeliveryNoteDto
+    {
+        public int Id { get; set; }
+        public string DeliveryNoteNo { get; set; } = string.Empty;
+        public string DispatchDate { get; set; } = string.Empty;
+        public string BorrowerName { get; set; } = string.Empty;
+        public string BorrowerRole { get; set; } = string.Empty;
+        public string? VehicleNo { get; set; }
+        public string? RouteName { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int? CreatedBy { get; set; }
+        public string CreatedAt { get; set; } = string.Empty;
+        public string? CompletedAt { get; set; }
+        public string? Remarks { get; set; }
+        public int TotalRecords { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal TotalQuantity { get; set; }
+        public string PrintUrl { get; set; } = string.Empty;
+        public List<DeliveryNoteDetailDto> Details { get; set; } = new();
+    }
+
+    public class DeliveryNoteDetailDto
+    {
+        public int Id { get; set; }
+        public int SupplierRegNo { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public string RouteName { get; set; } = string.Empty;
+        public int DisbursementRecordId { get; set; }
+        public int RequestId { get; set; }
+        public string ItemType { get; set; } = string.Empty;
+        public decimal? Amount { get; set; }
+        public decimal? Quantity { get; set; }
+        public string? Unit { get; set; }
+        public string? PaymentType { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public bool SupplierSignatureReceived { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class DeliveryNoteTrackingDto
+    {
+        public int Id { get; set; }
+        public string DeliveryNoteNo { get; set; } = string.Empty;
+        public string DispatchDate { get; set; } = string.Empty;
+        public string BorrowerName { get; set; } = string.Empty;
+        public string BorrowerRole { get; set; } = string.Empty;
+        public string? VehicleNo { get; set; }
+        public string? RouteName { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int TotalRecords { get; set; }
+        public string PrintUrl { get; set; } = string.Empty;
+    }
+
+    public class MarkDeliveryNoteStatusDto
+    {
+        public string? Remarks { get; set; }
     }
 }

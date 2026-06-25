@@ -31,6 +31,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<SupplierDashboardAdminPermission> SupplierDashboardAdminPermissions { get; set; }
         public DbSet<DisbursementRecord> DisbursementRecords { get; set; }
         public DbSet<MobileDeviceToken> MobileDeviceTokens { get; set; }
+        public DbSet<CodeGeneration> CodeGenerations { get; set; }
+        public DbSet<DeliveryNoteHeader> DeliveryNoteHeaders { get; set; }
+        public DbSet<DeliveryNoteDetail> DeliveryNoteDetails { get; set; }
 
         // View - read-only, joined from Reg_Supplier + Supplier_Management_Login
         public DbSet<SupplierLoginView> SupplierLoginView { get; set; }
@@ -218,6 +221,44 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
                 entity.HasIndex(d => new { d.IssuedType, d.RequestId }).IsUnique();
                 entity.HasIndex(d => new { d.CurrentStatus, d.IssueDate });
                 entity.HasIndex(d => d.RegNo);
+                entity.HasIndex(d => d.DeliveryNoteId);
+                entity.HasOne(d => d.DeliveryNote)
+                    .WithMany(h => h.DisbursementRecords)
+                    .HasForeignKey(d => d.DeliveryNoteId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<CodeGeneration>(entity =>
+            {
+                entity.ToTable("Supplier_Management_Code_Generation");
+                entity.HasIndex(x => new { x.CodePrefix, x.Year }).IsUnique();
+            });
+
+            modelBuilder.Entity<DeliveryNoteHeader>(entity =>
+            {
+                entity.ToTable("Supplier_Management_DeliveryNote_Header");
+                entity.HasIndex(x => x.DN_No).IsUnique();
+                entity.HasIndex(x => new { x.Status, x.DispatchDate });
+            });
+
+            modelBuilder.Entity<DeliveryNoteDetail>(entity =>
+            {
+                entity.ToTable("Supplier_Management_DeliveryNote_Detail");
+                entity.HasIndex(x => x.DeliveryNoteId);
+                entity.HasIndex(x => x.SupplierRegNo);
+                entity.HasIndex(x => x.DisbursementRecordId).IsUnique();
+                entity.HasOne(x => x.DeliveryNote)
+                    .WithMany(x => x.Details)
+                    .HasForeignKey(x => x.DeliveryNoteId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(x => x.Supplier)
+                    .WithMany()
+                    .HasForeignKey(x => x.SupplierRegNo)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.DisbursementRecord)
+                    .WithMany()
+                    .HasForeignKey(x => x.DisbursementRecordId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<MobileDeviceToken>(entity =>

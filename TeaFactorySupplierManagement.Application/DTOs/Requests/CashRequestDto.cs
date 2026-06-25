@@ -6,6 +6,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
         public string RequestNo { get; set; } = string.Empty;
         public string RequestType { get; set; } = string.Empty;
         public string Month { get; set; } = string.Empty;
+        public string SalaryDate { get; set; } = string.Empty;
         public DateTime RequestMonth { get; set; }
         public DateTime RequestDate { get; set; }
         public string RequestTime { get; set; } = string.Empty;
@@ -25,6 +26,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
         public string RequestType { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public string? Month { get; set; }
+        public string? SalaryDate { get; set; }
     }
 
     public class UpdateCashRequestDto

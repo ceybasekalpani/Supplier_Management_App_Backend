@@ -97,6 +97,178 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.ToTable("Supplier_Management_Cash_Requests");
                 });
 
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.CodeGeneration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CodePrefix")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("LastNo")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodePrefix", "Year")
+                        .IsUnique();
+
+                    b.ToTable("Supplier_Management_Code_Generation", (string)null);
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteDetail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DeliveryNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DisbursementRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("PaymentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("SupplierRegNo")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SupplierSignatureReceived")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryNoteId");
+
+                    b.HasIndex("DisbursementRecordId")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierRegNo");
+
+                    b.ToTable("Supplier_Management_DeliveryNote_Detail", (string)null);
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteHeader", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BorrowerName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("BorrowerRole")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DN_No")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("DispatchDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RouteName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VehicleNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DN_No")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "DispatchDate");
+
+                    b.ToTable("Supplier_Management_DeliveryNote_Header", (string)null);
+                });
+
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.DisbursementRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -129,6 +301,12 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("DeliveryNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DispatchedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("IssueDate")
                         .HasColumnType("datetime2");
@@ -191,6 +369,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeliveryNoteId");
 
                     b.HasIndex("RegNo");
 
@@ -433,6 +613,55 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.ToTable("Supplier_Management_Item_Requests");
                 });
 
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.MobileDeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FcmToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Platform")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("RegNo")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FcmToken")
+                        .IsUnique();
+
+                    b.HasIndex("RegNo", "IsActive");
+
+                    b.ToTable("Supplier_Management_MobileDeviceTokens", (string)null);
+                });
+
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.News", b =>
                 {
                     b.Property<int>("Id")
@@ -468,6 +697,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("TargetRegNo")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -477,6 +709,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TargetRegNo");
 
                     b.HasIndex("IsActive", "ShowPopup", "StartDate", "EndDate");
 
@@ -1185,6 +1419,43 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteDetail", b =>
+                {
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteHeader", "DeliveryNote")
+                        .WithMany("Details")
+                        .HasForeignKey("DeliveryNoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.DisbursementRecord", "DisbursementRecord")
+                        .WithMany()
+                        .HasForeignKey("DisbursementRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierRegNo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DeliveryNote");
+
+                    b.Navigation("DisbursementRecord");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.DisbursementRecord", b =>
+                {
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteHeader", "DeliveryNote")
+                        .WithMany("DisbursementRecords")
+                        .HasForeignKey("DeliveryNoteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DeliveryNote");
+                });
+
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.FertilizerRequest", b =>
                 {
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
@@ -1205,6 +1476,27 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.MobileDeviceToken", b =>
+                {
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("RegNo")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.News", b =>
+                {
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "TargetSupplier")
+                        .WithMany()
+                        .HasForeignKey("TargetRegNo")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("TargetSupplier");
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.NewsDismissed", b =>
@@ -1273,17 +1565,6 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Navigation("Supplier");
                 });
 
-            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.SupplierLogin", b =>
-                {
-                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
-                        .WithMany("Logins")
-                        .HasForeignKey("RegNo")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Supplier");
-                });
-
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.SupplierDashboardAdminPermission", b =>
                 {
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.SupplierDashboardAdminLogin", "Admin")
@@ -1293,6 +1574,17 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Admin");
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.SupplierLogin", b =>
+                {
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "Supplier")
+                        .WithMany("Logins")
+                        .HasForeignKey("RegNo")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.TrLeafCollectionTemp", b =>
@@ -1314,6 +1606,13 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteHeader", b =>
+                {
+                    b.Navigation("Details");
+
+                    b.Navigation("DisbursementRecords");
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.News", b =>

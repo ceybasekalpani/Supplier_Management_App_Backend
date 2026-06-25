@@ -34,6 +34,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string Type { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public string Month { get; set; } = string.Empty;
+        public string SalaryDate { get; set; } = string.Empty;
         public string Date { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string CheckedBy { get; set; } = "-";
@@ -49,6 +50,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public decimal Qty { get; set; }
         public string Unit { get; set; } = string.Empty;
         public string Month { get; set; } = string.Empty;
+        public string SalaryDate { get; set; } = string.Empty;
         public string Date { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string CheckedBy { get; set; } = "-";
@@ -64,6 +66,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public int Qty { get; set; }
         public string Unit { get; set; } = string.Empty;
         public string Month { get; set; } = string.Empty;
+        public string SalaryDate { get; set; } = string.Empty;
         public string Date { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string CheckedBy { get; set; } = "-";

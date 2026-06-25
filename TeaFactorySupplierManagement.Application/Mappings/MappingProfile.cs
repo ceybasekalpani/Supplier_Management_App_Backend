@@ -31,6 +31,7 @@ namespace TeaFactorySupplierManagement.Application.Mappings
             CreateMap<CashRequest, CashRequestDto>()
                 .ForMember(dest => dest.RequestTime, opt => opt.MapFrom(src =>
                     DateTime.Today.Add(src.RequestTime).ToString("hh:mm tt")))
+                .ForMember(dest => dest.SalaryDate, opt => opt.MapFrom(src => src.Month))
                 .ForMember(dest => dest.RequestedDate, opt => opt.MapFrom(src =>
                     src.RequestDate.Date.Add(src.RequestTime).ToString("dd MMM yyyy, hh:mm tt")));
 
@@ -46,6 +47,7 @@ namespace TeaFactorySupplierManagement.Application.Mappings
             CreateMap<FertilizerRequest, FertilizerRequestDto>()
                 .ForMember(dest => dest.RequestTime, opt => opt.MapFrom(src =>
                     DateTime.Today.Add(src.RequestTime).ToString("hh:mm tt")))
+                .ForMember(dest => dest.SalaryDate, opt => opt.MapFrom(src => src.Month))
                 .ForMember(dest => dest.Date, opt => opt.MapFrom(src =>
                     src.RequestDate.Date.Add(src.RequestTime).ToString("dd MMM yyyy, hh:mm tt")));
 
@@ -61,6 +63,7 @@ namespace TeaFactorySupplierManagement.Application.Mappings
             CreateMap<ItemRequest, ItemRequestDto>()
                 .ForMember(dest => dest.RequestTime, opt => opt.MapFrom(src =>
                     DateTime.Today.Add(src.RequestTime).ToString("hh:mm tt")))
+                .ForMember(dest => dest.SalaryDate, opt => opt.MapFrom(src => src.Month))
                 .ForMember(dest => dest.Date, opt => opt.MapFrom(src =>
                     src.RequestDate.Date.Add(src.RequestTime).ToString("dd MMM yyyy, hh:mm tt")));
 

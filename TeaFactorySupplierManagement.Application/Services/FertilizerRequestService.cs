@@ -57,7 +57,9 @@ namespace TeaFactorySupplierManagement.Application.Services
             fertilizerRequest.RequestNo = requestNo;
             fertilizerRequest.RequestDate = now.Date;
             fertilizerRequest.RequestTime = now.TimeOfDay;
-            fertilizerRequest.Month = !string.IsNullOrWhiteSpace(request.Month)
+            fertilizerRequest.Month = !string.IsNullOrWhiteSpace(request.SalaryDate)
+                ? request.SalaryDate
+                : !string.IsNullOrWhiteSpace(request.Month)
                 ? request.Month
                 : now.ToString("MMMM yyyy");
             fertilizerRequest.RequestMonth = new DateTime(now.Year, now.Month, 1);

@@ -92,12 +92,12 @@ namespace TeaFactorySupplierManagement.Application.Services
                 });
         }
 
-        public Task SendRequestStatusChangedAsync(int regNo, string requestType, int requestId, string status)
+        public Task SendRequestStatusChangedAsync(int regNo, string requestType, int requestId, string status, string? remarks = null, string? requestSummary = null)
         {
             var normalizedType = NormalizeRequestType(requestType);
             var normalizedStatus = NormalizeStatus(status);
             var title = BuildRequestStatusTitle(normalizedType, normalizedStatus);
-            var body = BuildRequestStatusBody(normalizedType, normalizedStatus);
+            var body = BuildRequestStatusBody(normalizedType, normalizedStatus, requestSummary, remarks);
 
             return SendAsync(
                 title,
@@ -219,6 +219,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                         Tokens = batchTokens,
                         Notification = BuildNotification(title, body),
                         Android = BuildAndroidConfig(),
+                        Apns = BuildApnsConfig(title, body),
                         Data = data
                     });
 
@@ -255,9 +256,27 @@ namespace TeaFactorySupplierManagement.Application.Services
             return new AndroidConfig
             {
                 Priority = Priority.High,
+                CollapseKey = "supplier_app_notification",
                 Notification = new AndroidNotification
                 {
                     ChannelId = "default",
+                    Sound = "default",
+                    ClickAction = "FLUTTER_NOTIFICATION_CLICK"
+                }
+            };
+        }
+
+        private static ApnsConfig BuildApnsConfig(string title, string body)
+        {
+            return new ApnsConfig
+            {
+                Aps = new Aps
+                {
+                    Alert = new ApsAlert
+                    {
+                        Title = title,
+                        Body = body
+                    },
                     Sound = "default"
                 }
             };
@@ -402,9 +421,18 @@ namespace TeaFactorySupplierManagement.Application.Services
             return $"{ToDisplayRequestType(requestType)} request {ToDisplayStatus(status)}";
         }
 
-        private static string BuildRequestStatusBody(string requestType, string status)
+        private static string BuildRequestStatusBody(string requestType, string status, string? requestSummary, string? remarks)
         {
-            return $"Your {ToDisplayRequestType(requestType).ToLowerInvariant()} request has been {ToDisplayStatus(status).ToLowerInvariant()}.";
+            var displayType = ToDisplayRequestType(requestType).ToLowerInvariant();
+            var cleanSummary = string.IsNullOrWhiteSpace(requestSummary) ? string.Empty : $" ({requestSummary.Trim()})";
+            var message = $"Your {displayType} request{cleanSummary} has been {ToDisplayStatus(status).ToLowerInvariant()}.";
+
+            if (status == "rejected" && !string.IsNullOrWhiteSpace(remarks))
+            {
+                message += $" Reason: {remarks.Trim()}";
+            }
+
+            return message;
         }
 
         private static string BuildDisbursementStatusTitle(string requestType, string status)
