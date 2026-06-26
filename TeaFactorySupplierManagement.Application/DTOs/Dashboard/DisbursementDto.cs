@@ -46,6 +46,8 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string Unit { get; set; } = string.Empty;
         public string RequestDate { get; set; } = string.Empty;
         public string ApprovedDate { get; set; } = string.Empty;
+        public string ApprovedBy { get; set; } = string.Empty;
+        public string CheckedBy { get; set; } = string.Empty;
         public string IssueDate { get; set; } = string.Empty;
         public string Method { get; set; } = string.Empty;
         public string CurrentStatus { get; set; } = string.Empty;
@@ -104,16 +106,23 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
     public class DeliveryNoteDetailDto
     {
         public int Id { get; set; }
+        public string RequestNo { get; set; } = string.Empty;
         public int SupplierRegNo { get; set; }
         public string SupplierName { get; set; } = string.Empty;
         public string RouteName { get; set; } = string.Empty;
         public int DisbursementRecordId { get; set; }
         public int RequestId { get; set; }
+        public string IssuedType { get; set; } = string.Empty;
+        public string IssuedDetails { get; set; } = string.Empty;
+        public string? ItemName { get; set; }
+        public string? FertilizerType { get; set; }
         public string ItemType { get; set; } = string.Empty;
         public decimal? Amount { get; set; }
         public decimal? Quantity { get; set; }
         public string? Unit { get; set; }
         public string? PaymentType { get; set; }
+        public string ApprovedBy { get; set; } = string.Empty;
+        public string CheckedBy { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public bool SupplierSignatureReceived { get; set; }
         public string? Remarks { get; set; }

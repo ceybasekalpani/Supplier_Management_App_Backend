@@ -57,7 +57,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             if (existing != null)
             {
-                return ToTrackingDto(existing);
+                return ToTrackingDto(existing, await GetApprovedByAsync(existing.IssuedType, existing.RequestId));
             }
 
             if (normalizedType == "advance")
@@ -96,7 +96,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 _context.DisbursementRecords.Add(record);
                 await _context.SaveChangesAsync();
                 await SendDisbursementStatusPushAsync(request.RegNo, normalizedType, request.Id, "issued");
-                return ToTrackingDto(record);
+                return ToTrackingDto(record, request.ApprovedBy);
             }
 
             if (normalizedType == "fertilizer")
@@ -137,7 +137,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 _context.DisbursementRecords.Add(record);
                 await _context.SaveChangesAsync();
                 await SendDisbursementStatusPushAsync(request.RegNo, normalizedType, request.Id, "issued");
-                return ToTrackingDto(record);
+                return ToTrackingDto(record, request.ApprovedBy);
             }
 
             var itemRequest = await _context.ItemRequests
@@ -176,7 +176,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             _context.DisbursementRecords.Add(itemRecord);
             await _context.SaveChangesAsync();
             await SendDisbursementStatusPushAsync(itemRequest.RegNo, normalizedType, itemRequest.Id, "issued");
-            return ToTrackingDto(itemRecord);
+            return ToTrackingDto(itemRecord, itemRequest.ApprovedBy);
         }
 
         private async Task SendDisbursementStatusPushAsync(int regNo, string requestType, int requestId, string status)
@@ -333,9 +333,17 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .AsNoTracking()
                 .Include(x => x.Details)
                     .ThenInclude(x => x.Supplier)
+                .Include(x => x.Details)
+                    .ThenInclude(x => x.DisbursementRecord)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
-            return header == null ? null : ToDeliveryNoteDto(header);
+            if (header == null)
+            {
+                return null;
+            }
+
+            var approvals = await GetApprovalLookupAsync(header.Details.Select(GetApprovalKey));
+            return ToDeliveryNoteDto(header, approvals);
         }
 
         public async Task<DeliveryNoteDto?> MarkDeliveryNoteReturnedAsync(int id, string? remarks)
@@ -470,7 +478,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .ThenByDescending(x => x.Id)
                 .ToListAsync();
 
-            return rows.Select(ToTrackingDto).ToList();
+            var approvals = await GetApprovalLookupAsync(rows.Select(x => new ApprovalKey(x.IssuedType, x.RequestId)));
+            return rows.Select(x => ToTrackingDto(x, GetApprovedBy(approvals, x.IssuedType, x.RequestId))).ToList();
         }
 
         public async Task<DisbursementTrackingDto?> MarkReceivedAsync(int id, string? completedBy, string? completedDevice)
@@ -488,7 +497,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             record.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return ToTrackingDto(record);
+            return ToTrackingDto(record, await GetApprovedByAsync(record.IssuedType, record.RequestId));
         }
 
         private async Task<DeliveryNoteDto?> UpdateDeliveryNoteStatusAsync(int id, string status, string? remarks)
@@ -869,8 +878,107 @@ namespace TeaFactorySupplierManagement.Application.Services
             return query;
         }
 
-        private static DisbursementTrackingDto ToTrackingDto(DisbursementRecord record)
+        private readonly record struct ApprovalKey(string IssuedType, int RequestId);
+
+        private async Task<Dictionary<ApprovalKey, string>> GetApprovalLookupAsync(IEnumerable<ApprovalKey> keys)
         {
+            var distinctKeys = keys
+                .Where(x => !string.IsNullOrWhiteSpace(x.IssuedType) && x.RequestId > 0)
+                .Select(x => new ApprovalKey(NormalizeApprovalIssuedType(x.IssuedType), x.RequestId))
+                .Distinct()
+                .ToList();
+
+            var approvals = new Dictionary<ApprovalKey, string>();
+
+            var advanceIds = distinctKeys.Where(x => x.IssuedType == "advance").Select(x => x.RequestId).Distinct().ToList();
+            if (advanceIds.Count > 0)
+            {
+                var rows = await _context.CashRequests
+                    .AsNoTracking()
+                    .Where(x => advanceIds.Contains(x.Id))
+                    .Select(x => new { x.Id, x.ApprovedBy })
+                    .ToListAsync();
+
+                foreach (var row in rows)
+                {
+                    approvals[new ApprovalKey("advance", row.Id)] = CleanApprover(row.ApprovedBy);
+                }
+            }
+
+            var fertilizerIds = distinctKeys.Where(x => x.IssuedType == "fertilizer").Select(x => x.RequestId).Distinct().ToList();
+            if (fertilizerIds.Count > 0)
+            {
+                var rows = await _context.FertilizerRequests
+                    .AsNoTracking()
+                    .Where(x => fertilizerIds.Contains(x.Id))
+                    .Select(x => new { x.Id, x.ApprovedBy })
+                    .ToListAsync();
+
+                foreach (var row in rows)
+                {
+                    approvals[new ApprovalKey("fertilizer", row.Id)] = CleanApprover(row.ApprovedBy);
+                }
+            }
+
+            var itemIds = distinctKeys.Where(x => x.IssuedType == "items").Select(x => x.RequestId).Distinct().ToList();
+            if (itemIds.Count > 0)
+            {
+                var rows = await _context.ItemRequests
+                    .AsNoTracking()
+                    .Where(x => itemIds.Contains(x.Id))
+                    .Select(x => new { x.Id, x.ApprovedBy })
+                    .ToListAsync();
+
+                foreach (var row in rows)
+                {
+                    approvals[new ApprovalKey("items", row.Id)] = CleanApprover(row.ApprovedBy);
+                }
+            }
+
+            return approvals;
+        }
+
+        private async Task<string> GetApprovedByAsync(string issuedType, int requestId)
+        {
+            var approvals = await GetApprovalLookupAsync(new[] { new ApprovalKey(issuedType, requestId) });
+            return GetApprovedBy(approvals, issuedType, requestId);
+        }
+
+        private static ApprovalKey GetApprovalKey(DeliveryNoteDetail detail)
+        {
+            var issuedType = detail.DisbursementRecord?.IssuedType ?? detail.ItemType;
+            return new ApprovalKey(issuedType, detail.RequestId);
+        }
+
+        private static string GetApprovedBy(Dictionary<ApprovalKey, string> approvals, string issuedType, int requestId)
+        {
+            return approvals.TryGetValue(new ApprovalKey(NormalizeApprovalIssuedType(issuedType), requestId), out var approvedBy)
+                ? approvedBy
+                : string.Empty;
+        }
+
+        private static string CleanApprover(string? value)
+        {
+            var clean = value?.Trim();
+            return string.IsNullOrWhiteSpace(clean) || clean == "-" ? string.Empty : clean;
+        }
+
+        private static string NormalizeApprovalIssuedType(string issuedType)
+        {
+            var clean = issuedType.Trim().ToLowerInvariant();
+            return clean switch
+            {
+                "advance" or "cash" => "advance",
+                "fertilizer" or "fertiliser" => "fertilizer",
+                "item" or "items" => "items",
+                _ => clean
+            };
+        }
+
+        private static DisbursementTrackingDto ToTrackingDto(DisbursementRecord record, string? approvedBy = null)
+        {
+            var cleanApprovedBy = CleanApprover(approvedBy);
+
             return new DisbursementTrackingDto
             {
                 Id = record.Id,
@@ -887,6 +995,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Unit = record.Unit ?? string.Empty,
                 RequestDate = ToDateKey(record.RequestDate),
                 ApprovedDate = record.ApprovedDate.HasValue ? ToDateKey(record.ApprovedDate.Value) : string.Empty,
+                ApprovedBy = cleanApprovedBy,
+                CheckedBy = cleanApprovedBy,
                 IssueDate = ToDateKey(record.IssueDate),
                 Method = record.Method,
                 CurrentStatus = record.CurrentStatus,
@@ -899,11 +1009,11 @@ namespace TeaFactorySupplierManagement.Application.Services
             };
         }
 
-        private static DeliveryNoteDto ToDeliveryNoteDto(DeliveryNoteHeader header)
+        private static DeliveryNoteDto ToDeliveryNoteDto(DeliveryNoteHeader header, Dictionary<ApprovalKey, string> approvals)
         {
             var details = header.Details
                 .OrderBy(x => x.Id)
-                .Select(ToDeliveryNoteDetailDto)
+                .Select(x => ToDeliveryNoteDetailDto(x, GetApprovedBy(approvals, GetApprovalKey(x).IssuedType, GetApprovalKey(x).RequestId)))
                 .ToList();
 
             return new DeliveryNoteDto
@@ -928,21 +1038,32 @@ namespace TeaFactorySupplierManagement.Application.Services
             };
         }
 
-        private static DeliveryNoteDetailDto ToDeliveryNoteDetailDto(DeliveryNoteDetail detail)
+        private static DeliveryNoteDetailDto ToDeliveryNoteDetailDto(DeliveryNoteDetail detail, string? approvedBy = null)
         {
+            var record = detail.DisbursementRecord;
+            var cleanApprovedBy = CleanApprover(approvedBy);
+            var issuedType = record?.IssuedType ?? detail.ItemType;
+
             return new DeliveryNoteDetailDto
             {
                 Id = detail.Id,
+                RequestNo = record?.RequestNo ?? string.Empty,
                 SupplierRegNo = detail.SupplierRegNo,
                 SupplierName = detail.Supplier?.RegName ?? string.Empty,
                 RouteName = detail.Supplier?.Route ?? string.Empty,
                 DisbursementRecordId = detail.DisbursementRecordId,
                 RequestId = detail.RequestId,
+                IssuedType = issuedType,
+                IssuedDetails = record?.IssuedDetails ?? string.Empty,
+                ItemName = record?.ItemName,
+                FertilizerType = issuedType == "fertilizer" ? record?.ItemName : null,
                 ItemType = detail.ItemType,
                 Amount = detail.Amount,
                 Quantity = detail.Quantity,
                 Unit = detail.Unit,
                 PaymentType = detail.PaymentType,
+                ApprovedBy = cleanApprovedBy,
+                CheckedBy = cleanApprovedBy,
                 Status = detail.Status,
                 SupplierSignatureReceived = detail.SupplierSignatureReceived,
                 Remarks = detail.Remarks
