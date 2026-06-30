@@ -222,9 +222,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
                 entity.HasIndex(d => new { d.CurrentStatus, d.IssueDate });
                 entity.HasIndex(d => d.RegNo);
                 entity.HasIndex(d => d.DeliveryNoteId);
+                entity.HasIndex(d => d.DeliveryNoteNo);
                 entity.HasOne(d => d.DeliveryNote)
                     .WithMany(h => h.DisbursementRecords)
-                    .HasForeignKey(d => d.DeliveryNoteId)
+                    .HasForeignKey(d => d.DeliveryNoteNo)
+                    .HasPrincipalKey(h => h.DN_No)
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
@@ -237,7 +239,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             modelBuilder.Entity<DeliveryNoteHeader>(entity =>
             {
                 entity.ToTable("Supplier_Management_DeliveryNote_Header");
-                entity.HasIndex(x => x.DN_No).IsUnique();
+                entity.HasAlternateKey(x => x.DN_No);
                 entity.HasIndex(x => new { x.Status, x.DispatchDate });
             });
 
@@ -245,11 +247,13 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             {
                 entity.ToTable("Supplier_Management_DeliveryNote_Detail");
                 entity.HasIndex(x => x.DeliveryNoteId);
+                entity.HasIndex(x => x.DeliveryNoteNo);
                 entity.HasIndex(x => x.SupplierRegNo);
                 entity.HasIndex(x => x.DisbursementRecordId).IsUnique();
                 entity.HasOne(x => x.DeliveryNote)
                     .WithMany(x => x.Details)
-                    .HasForeignKey(x => x.DeliveryNoteId)
+                    .HasForeignKey(x => x.DeliveryNoteNo)
+                    .HasPrincipalKey(x => x.DN_No)
                     .OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne(x => x.Supplier)
                     .WithMany()

@@ -12,7 +12,7 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         Task<List<DeliveryNoteTrackingDto>> GetDeliveryNotesAsync(string? status, string? search, DateTime? fromDate, DateTime? toDate);
         Task<DeliveryNoteDto?> GetDeliveryNoteAsync(int id);
         Task<DeliveryNoteDto?> MarkDeliveryNoteReturnedAsync(int id, string? remarks);
-        Task<DeliveryNoteDto?> MarkDeliveryNoteCompletedAsync(int id, string? remarks);
+        Task<DeliveryNoteDto?> MarkDeliveryNoteCompletedAsync(int id, string? remarks, string? completedBy, string? completedDevice);
         Task<string?> BuildDeliveryNotePrintHtmlAsync(int id);
     }
 }

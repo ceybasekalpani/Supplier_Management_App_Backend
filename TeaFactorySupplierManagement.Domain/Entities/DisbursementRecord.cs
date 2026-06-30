@@ -68,9 +68,12 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public int? DeliveryNoteId { get; set; }
 
+        [MaxLength(30)]
+        public string? DeliveryNoteNo { get; set; }
+
         public DateTime? DispatchedAt { get; set; }
 
-        [ForeignKey(nameof(DeliveryNoteId))]
+        [ForeignKey(nameof(DeliveryNoteNo))]
         public virtual DeliveryNoteHeader? DeliveryNote { get; set; }
     }
 }

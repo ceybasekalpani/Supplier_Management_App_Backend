@@ -142,7 +142,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPost("delivery-notes/{id:int}/completed")]
         public async Task<IActionResult> MarkDeliveryNoteCompleted([FromRoute] int id, [FromBody] MarkDeliveryNoteStatusDto? request)
         {
-            var result = await _disbursementService.MarkDeliveryNoteCompletedAsync(id, request?.Remarks);
+            var completedBy = string.IsNullOrWhiteSpace(request?.CompletedBy)
+                ? User.Identity?.Name ?? User.FindFirst("unique_name")?.Value
+                : request.CompletedBy;
+
+            var result = await _disbursementService.MarkDeliveryNoteCompletedAsync(id, request?.Remarks, completedBy, request?.CompletedDevice);
             if (result == null)
             {
                 return NotFound(new { message = "Delivery note not found." });

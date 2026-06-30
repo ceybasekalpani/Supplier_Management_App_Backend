@@ -214,6 +214,11 @@ namespace TeaFactorySupplierManagement.Application.Services
                 }
 
                 var record = await EnsureDisbursementRecordAsync(normalizedType, selection.RequestId, selection.Method, createdBy, now);
+                if (normalizedType == "advance" && !IsDeliveryNoteAdvanceMethod(record.Method))
+                {
+                    continue;
+                }
+
                 if (record.DeliveryNoteId.HasValue || record.CurrentStatus == "dispatched" || record.CurrentStatus == "completed")
                 {
                     throw new ArgumentException($"Request {selection.RequestId} ({normalizedType}) is already dispatched.");
@@ -229,7 +234,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             if (records.Count == 0)
             {
-                throw new ArgumentException("No eligible records found. Cash advances, fertilizer, and item records can be dispatched; bank transfer advances are excluded.");
+                throw new ArgumentException("No eligible records found. Only cash advances, fertilizer, and item records can be dispatched; cheque, bank transfer, and account transfer advances are excluded.");
             }
 
             var deliveryNoteNo = await GenerateDeliveryNoteNoAsync(now);
@@ -254,6 +259,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 record.CurrentStatus = "dispatched";
                 record.DeliveryNoteId = header.Id;
+                record.DeliveryNoteNo = header.DN_No;
                 record.DispatchedAt = now;
                 record.IssueDate = now.Date;
                 record.UpdatedAt = now;
@@ -261,6 +267,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 _context.DeliveryNoteDetails.Add(new DeliveryNoteDetail
                 {
                     DeliveryNoteId = header.Id,
+                    DeliveryNoteNo = header.DN_No,
                     SupplierRegNo = record.RegNo,
                     DisbursementRecordId = record.Id,
                     RequestId = record.RequestId,
@@ -351,9 +358,9 @@ namespace TeaFactorySupplierManagement.Application.Services
             return await UpdateDeliveryNoteStatusAsync(id, "returned", remarks);
         }
 
-        public async Task<DeliveryNoteDto?> MarkDeliveryNoteCompletedAsync(int id, string? remarks)
+        public async Task<DeliveryNoteDto?> MarkDeliveryNoteCompletedAsync(int id, string? remarks, string? completedBy, string? completedDevice)
         {
-            return await UpdateDeliveryNoteStatusAsync(id, "completed", remarks);
+            return await UpdateDeliveryNoteStatusAsync(id, "completed", remarks, completedBy, completedDevice);
         }
 
         public async Task<string?> BuildDeliveryNotePrintHtmlAsync(int id)
@@ -490,20 +497,23 @@ namespace TeaFactorySupplierManagement.Application.Services
                 return null;
             }
 
+            var now = DateTime.Now;
             record.CurrentStatus = "completed";
-            record.CompletedDate = DateTime.Now.Date;
+            record.CompletedDate = now;
             record.CompletedBy = string.IsNullOrWhiteSpace(completedBy) ? "Dashboard Admin" : completedBy.Trim();
             record.CompletedDevice = string.IsNullOrWhiteSpace(completedDevice) ? null : completedDevice.Trim();
-            record.UpdatedAt = DateTime.Now;
+            record.UpdatedAt = now;
 
             await _context.SaveChangesAsync();
             return ToTrackingDto(record, await GetApprovedByAsync(record.IssuedType, record.RequestId));
         }
 
-        private async Task<DeliveryNoteDto?> UpdateDeliveryNoteStatusAsync(int id, string status, string? remarks)
+        private async Task<DeliveryNoteDto?> UpdateDeliveryNoteStatusAsync(int id, string status, string? remarks, string? completedBy = null, string? completedDevice = null)
         {
             var normalizedStatus = NormalizeDeliveryNoteStatus(status);
             var now = DateTime.Now;
+            var cleanCompletedBy = string.IsNullOrWhiteSpace(completedBy) ? "Dashboard Admin" : completedBy.Trim();
+            var cleanCompletedDevice = string.IsNullOrWhiteSpace(completedDevice) ? null : completedDevice.Trim();
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -531,7 +541,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                 if (detail.DisbursementRecord != null && normalizedStatus == "completed")
                 {
                     detail.DisbursementRecord.CurrentStatus = "completed";
-                    detail.DisbursementRecord.CompletedDate = now.Date;
+                    detail.DisbursementRecord.CompletedDate = now;
+                    detail.DisbursementRecord.CompletedBy = cleanCompletedBy;
+                    detail.DisbursementRecord.CompletedDevice = cleanCompletedDevice;
                     detail.DisbursementRecord.UpdatedAt = now;
                 }
             }
@@ -579,11 +591,6 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             if (existing != null)
             {
-                if (normalizedType == "advance" && IsDeliveryNoteAdvanceMethod(method))
-                {
-                    existing.Method = NormalizeMethod(method);
-                }
-
                 return existing;
             }
 
@@ -1000,11 +1007,11 @@ namespace TeaFactorySupplierManagement.Application.Services
                 IssueDate = ToDateKey(record.IssueDate),
                 Method = record.Method,
                 CurrentStatus = record.CurrentStatus,
-                CompletedDate = record.CompletedDate.HasValue ? ToDateKey(record.CompletedDate.Value) : null,
+                CompletedDate = record.CompletedDate.HasValue ? ToDateTimeKey(record.CompletedDate.Value) : null,
                 CompletedBy = record.CompletedBy,
                 CompletedDevice = record.CompletedDevice,
                 DeliveryNoteId = record.DeliveryNoteId,
-                DeliveryNoteNo = record.DeliveryNote?.DN_No,
+                DeliveryNoteNo = record.DeliveryNote?.DN_No ?? record.DeliveryNoteNo,
                 DispatchedAt = record.DispatchedAt.HasValue ? ToDateKey(record.DispatchedAt.Value) : null
             };
         }
@@ -1052,6 +1059,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 SupplierName = detail.Supplier?.RegName ?? string.Empty,
                 RouteName = detail.Supplier?.Route ?? string.Empty,
                 DisbursementRecordId = detail.DisbursementRecordId,
+                DeliveryNoteNo = detail.DeliveryNoteNo,
                 RequestId = detail.RequestId,
                 IssuedType = issuedType,
                 IssuedDetails = record?.IssuedDetails ?? string.Empty,
@@ -1132,14 +1140,15 @@ namespace TeaFactorySupplierManagement.Application.Services
                 "cash" => "Cash",
                 "bank" or "bank transfer" or "bank_transfer" => "Bank Transfer",
                 "cheque" or "check" => "Cheque",
-                _ => throw new ArgumentException("Payment method must be Cash, Bank Transfer, or Cheque.")
+                "account" or "account transfer" or "account_transfer" => "Account Transfer",
+                _ => throw new ArgumentException("Payment method must be Cash, Bank Transfer, Cheque, or Account Transfer.")
             };
         }
 
         private static bool IsDeliveryNoteAdvanceMethod(string? method)
         {
             var normalized = NormalizeMethod(method);
-            return normalized is "Cash" or "Cheque";
+            return normalized == "Cash";
         }
 
         private static void ValidateDeliveryNoteRequest(GenerateDeliveryNoteDto request)

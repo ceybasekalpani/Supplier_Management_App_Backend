@@ -8,6 +8,10 @@ namespace TeaFactorySupplierManagement.Domain.Entities
     {
         public int DeliveryNoteId { get; set; }
 
+        [Required]
+        [MaxLength(30)]
+        public string DeliveryNoteNo { get; set; } = string.Empty;
+
         public int SupplierRegNo { get; set; }
 
         public int DisbursementRecordId { get; set; }
@@ -39,7 +43,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         [MaxLength(500)]
         public string? Remarks { get; set; }
 
-        [ForeignKey(nameof(DeliveryNoteId))]
+        [ForeignKey(nameof(DeliveryNoteNo))]
         public virtual DeliveryNoteHeader? DeliveryNote { get; set; }
 
         [ForeignKey(nameof(SupplierRegNo))]

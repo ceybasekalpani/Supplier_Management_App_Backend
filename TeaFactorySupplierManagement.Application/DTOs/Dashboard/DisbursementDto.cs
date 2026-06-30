@@ -111,6 +111,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string SupplierName { get; set; } = string.Empty;
         public string RouteName { get; set; } = string.Empty;
         public int DisbursementRecordId { get; set; }
+        public string DeliveryNoteNo { get; set; } = string.Empty;
         public int RequestId { get; set; }
         public string IssuedType { get; set; } = string.Empty;
         public string IssuedDetails { get; set; } = string.Empty;
@@ -145,5 +146,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
     public class MarkDeliveryNoteStatusDto
     {
         public string? Remarks { get; set; }
+        public string? CompletedBy { get; set; }
+        public string? CompletedDevice { get; set; }
     }
 }

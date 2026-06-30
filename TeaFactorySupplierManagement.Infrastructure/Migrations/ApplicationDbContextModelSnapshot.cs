@@ -152,6 +152,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<int>("DeliveryNoteId")
                         .HasColumnType("int");
 
+                    b.Property<string>("DeliveryNoteNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<int>("DisbursementRecordId")
                         .HasColumnType("int");
 
@@ -195,6 +200,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DeliveryNoteId");
+
+                    b.HasIndex("DeliveryNoteNo");
 
                     b.HasIndex("DisbursementRecordId")
                         .IsUnique();
@@ -261,9 +268,6 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DN_No")
-                        .IsUnique();
-
                     b.HasIndex("Status", "DispatchDate");
 
                     b.ToTable("Supplier_Management_DeliveryNote_Header", (string)null);
@@ -304,6 +308,10 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.Property<int?>("DeliveryNoteId")
                         .HasColumnType("int");
+
+                    b.Property<string>("DeliveryNoteNo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("DispatchedAt")
                         .HasColumnType("datetime2");
@@ -371,6 +379,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DeliveryNoteId");
+
+                    b.HasIndex("DeliveryNoteNo");
 
                     b.HasIndex("RegNo");
 
@@ -1423,7 +1433,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                 {
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteHeader", "DeliveryNote")
                         .WithMany("Details")
-                        .HasForeignKey("DeliveryNoteId")
+                        .HasForeignKey("DeliveryNoteNo")
+                        .HasPrincipalKey("DN_No")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1450,7 +1461,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                 {
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.DeliveryNoteHeader", "DeliveryNote")
                         .WithMany("DisbursementRecords")
-                        .HasForeignKey("DeliveryNoteId")
+                        .HasForeignKey("DeliveryNoteNo")
+                        .HasPrincipalKey("DN_No")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("DeliveryNote");
