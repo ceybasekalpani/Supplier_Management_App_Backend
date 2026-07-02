@@ -63,13 +63,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             }
         }
 
-        public Task SendNewsAsync(int newsId, string title, string body, string audienceType, int? targetRegNo)
+        public Task SendNewsAsync(int newsId, string title, string body, string audienceType, int? targetRegNo, string? targetRoute = null)
         {
             return SendAsync(
                 title,
                 body,
                 NormalizeAudienceType(audienceType),
                 targetRegNo,
+                CleanOptional(targetRoute),
                 new Dictionary<string, string>
                 {
                     ["type"] = "news",
@@ -77,13 +78,14 @@ namespace TeaFactorySupplierManagement.Application.Services
                 });
         }
 
-        public Task SendNotificationAsync(int notificationId, string title, string body, string type, string audienceType, int? targetRegNo)
+        public Task SendNotificationAsync(int notificationId, string title, string body, string type, string audienceType, int? targetRegNo, string? targetRoute = null)
         {
             return SendAsync(
                 title,
                 body,
                 NormalizeAudienceType(audienceType),
                 targetRegNo,
+                CleanOptional(targetRoute),
                 new Dictionary<string, string>
                 {
                     ["type"] = "notification",
@@ -104,6 +106,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 body,
                 "SpecificSupplier",
                 regNo,
+                null,
                 new Dictionary<string, string>
                 {
                     ["type"] = "request_status_changed",
@@ -125,6 +128,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 body,
                 "SpecificSupplier",
                 regNo,
+                null,
                 new Dictionary<string, string>
                 {
                     ["type"] = "disbursement_status_changed",
@@ -144,6 +148,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 $"{ToDisplayConfigurationCategory(normalizedCategory)} list has been updated.",
                 "AllSuppliers",
                 null,
+                null,
                 new Dictionary<string, string>
                 {
                     ["type"] = "configuration_changed",
@@ -158,6 +163,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             string body,
             string audienceType,
             int? targetRegNo,
+            string? targetRoute,
             Dictionary<string, string> data)
         {
             if (!IsEnabled() || !EnsureFirebaseApp())
@@ -184,6 +190,26 @@ namespace TeaFactorySupplierManagement.Application.Services
                 }
 
                 await SendToTokensAsync(tokens, title, body, data);
+                return;
+            }
+
+            if (audienceType == "Route" && !string.IsNullOrWhiteSpace(targetRoute))
+            {
+                var routeTokens = await _context.MobileDeviceTokens
+                    .AsNoTracking()
+                    .Where(x => x.IsActive && x.Supplier != null && x.Supplier.Route == targetRoute)
+                    .Select(x => x.FcmToken)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (routeTokens.Count == 0)
+                {
+                    _logger.LogWarning("Firebase push skipped. No active FCM tokens found for route {Route}.", targetRoute);
+                    return;
+                }
+
+                data["targetRoute"] = targetRoute;
+                await SendToTokensAsync(routeTokens, title, body, data);
                 return;
             }
 
@@ -381,9 +407,20 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         private static string NormalizeAudienceType(string? value)
         {
-            return string.Equals(value, "SpecificSupplier", StringComparison.OrdinalIgnoreCase)
-                ? "SpecificSupplier"
+            if (string.Equals(value, "SpecificSupplier", StringComparison.OrdinalIgnoreCase))
+            {
+                return "SpecificSupplier";
+            }
+
+            return string.Equals(value, "Route", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "RouteWise", StringComparison.OrdinalIgnoreCase)
+                ? "Route"
                 : "AllSuppliers";
+        }
+
+        private static string? CleanOptional(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private static string NormalizeRequestType(string? value)

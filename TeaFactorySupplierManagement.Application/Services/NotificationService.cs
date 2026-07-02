@@ -22,6 +22,7 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<List<NotificationDto>> GetNotificationsForSupplierAsync(int regNo)
         {
             var today = DateTime.Now;
+            var supplierRoute = await GetSupplierRouteAsync(regNo);
 
             var cutoffDate = today.AddMonths(-1);
 
@@ -29,7 +30,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .Where(n => n.IsActive &&
                             (n.StartDate == null || n.StartDate <= today) &&
                             (n.EndDate == null || n.EndDate >= today) &&
-                            (n.TargetRegNo == null || n.TargetRegNo == regNo) &&
+                            (n.TargetRegNo == regNo ||
+                             (n.TargetRegNo == null &&
+                              (n.TargetRoute == null ||
+                               (supplierRoute != null && n.TargetRoute == supplierRoute)))) &&
                             n.CreatedAt >= cutoffDate)
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
@@ -72,6 +76,7 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<NotificationDto?> GetNotificationByIdAsync(int notificationId, int regNo)
         {
             var today = DateTime.Now;
+            var supplierRoute = await GetSupplierRouteAsync(regNo);
             var notification = await _context.Notifications
                 .AsNoTracking()
                 .FirstOrDefaultAsync(n =>
@@ -79,7 +84,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                     n.IsActive &&
                     (n.StartDate == null || n.StartDate <= today) &&
                     (n.EndDate == null || n.EndDate >= today) &&
-                    (n.TargetRegNo == null || n.TargetRegNo == regNo));
+                    (n.TargetRegNo == regNo ||
+                     (n.TargetRegNo == null &&
+                      (n.TargetRoute == null ||
+                       (supplierRoute != null && n.TargetRoute == supplierRoute)))));
 
             if (notification == null)
             {
@@ -171,5 +179,15 @@ namespace TeaFactorySupplierManagement.Application.Services
                 await _context.SaveChangesAsync();
             }
         }
+
+        private async Task<string?> GetSupplierRouteAsync(int regNo)
+        {
+            return await _context.RegSuppliers
+                .AsNoTracking()
+                .Where(x => x.RegNo == regNo)
+                .Select(x => x.Route)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }

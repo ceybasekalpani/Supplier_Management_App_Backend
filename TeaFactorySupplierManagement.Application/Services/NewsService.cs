@@ -22,12 +22,16 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<List<NewsDto>> GetActiveNewsAsync(int regNo)
         {
             var today = DateTime.Now.Date;
+            var supplierRoute = await GetSupplierRouteAsync(regNo);
 
             var news = await _context.News
                 .Where(n => n.IsActive &&
                             (n.StartDate == null || n.StartDate <= today) &&
                             (n.EndDate == null || n.EndDate >= today) &&
-                            (n.TargetRegNo == null || n.TargetRegNo == regNo))
+                            (n.TargetRegNo == regNo ||
+                             (n.TargetRegNo == null &&
+                              (n.TargetRoute == null ||
+                               (supplierRoute != null && n.TargetRoute == supplierRoute)))))
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
                 .AsNoTracking()
@@ -51,6 +55,7 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<NewsDto?> GetNewsByIdAsync(int newsId, int regNo)
         {
             var today = DateTime.Now.Date;
+            var supplierRoute = await GetSupplierRouteAsync(regNo);
             var news = await _context.News
                 .AsNoTracking()
                 .FirstOrDefaultAsync(n =>
@@ -58,7 +63,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                     n.IsActive &&
                     (n.StartDate == null || n.StartDate <= today) &&
                     (n.EndDate == null || n.EndDate >= today) &&
-                    (n.TargetRegNo == null || n.TargetRegNo == regNo));
+                    (n.TargetRegNo == regNo ||
+                     (n.TargetRegNo == null &&
+                      (n.TargetRoute == null ||
+                       (supplierRoute != null && n.TargetRoute == supplierRoute)))));
 
             return news == null ? null : _mapper.Map<NewsDto>(news);
         }
@@ -67,6 +75,7 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<NewsDto?> GetActivePopupNewsAsync(int regNo)
         {
             var today = DateTime.Now.Date;
+            var supplierRoute = await GetSupplierRouteAsync(regNo);
 
             // First get active popup news
             var news = await _context.News
@@ -74,7 +83,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                             n.ShowPopup &&
                             (n.StartDate == null || n.StartDate <= today) &&
                             (n.EndDate == null || n.EndDate >= today) &&
-                            (n.TargetRegNo == null || n.TargetRegNo == regNo))
+                            (n.TargetRegNo == regNo ||
+                             (n.TargetRegNo == null &&
+                              (n.TargetRoute == null ||
+                               (supplierRoute != null && n.TargetRoute == supplierRoute)))))
                 .OrderByDescending(n => n.Priority)
                 .ThenByDescending(n => n.CreatedAt)
                 .AsNoTracking()
@@ -130,5 +142,15 @@ namespace TeaFactorySupplierManagement.Application.Services
             var popupNews = await GetActivePopupNewsAsync(regNo);
             return popupNews != null;
         }
+
+        private async Task<string?> GetSupplierRouteAsync(int regNo)
+        {
+            return await _context.RegSuppliers
+                .AsNoTracking()
+                .Where(x => x.RegNo == regNo)
+                .Select(x => x.Route)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }

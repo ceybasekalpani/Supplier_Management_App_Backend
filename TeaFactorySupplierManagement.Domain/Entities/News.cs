@@ -27,6 +27,9 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         public int? TargetRegNo { get; set; }
 
+        [MaxLength(200)]
+        public string? TargetRoute { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string CreatedBy { get; set; } = string.Empty;

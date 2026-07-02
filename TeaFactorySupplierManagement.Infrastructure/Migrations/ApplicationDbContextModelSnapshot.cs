@@ -710,6 +710,10 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<int?>("TargetRegNo")
                         .HasColumnType("int");
 
+                    b.Property<string>("TargetRoute")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -722,7 +726,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasIndex("TargetRegNo");
 
-                    b.HasIndex("IsActive", "ShowPopup", "StartDate", "EndDate");
+                    b.HasIndex("IsActive", "ShowPopup", "StartDate", "EndDate", "TargetRegNo", "TargetRoute");
 
                     b.ToTable("Supplier_Management_News");
                 });
@@ -780,6 +784,10 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<int?>("TargetRegNo")
                         .HasColumnType("int");
 
+                    b.Property<string>("TargetRoute")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -797,7 +805,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
 
                     b.HasIndex("TargetRegNo");
 
-                    b.HasIndex("IsActive", "StartDate", "EndDate", "TargetRegNo");
+                    b.HasIndex("IsActive", "StartDate", "EndDate", "TargetRegNo", "TargetRoute");
 
                     b.ToTable("Supplier_Management_Notifications");
                 });
@@ -1534,7 +1542,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                 {
                     b.HasOne("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", "TargetSupplier")
                         .WithMany()
-                        .HasForeignKey("TargetRegNo");
+                        .HasForeignKey("TargetRegNo")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("TargetSupplier");
                 });

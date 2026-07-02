@@ -128,10 +128,10 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
 
             // Configure indexes for junction tables
             modelBuilder.Entity<Notification>()
-                .HasIndex(n => new { n.IsActive, n.StartDate, n.EndDate, n.TargetRegNo });
+                .HasIndex(n => new { n.IsActive, n.StartDate, n.EndDate, n.TargetRegNo, n.TargetRoute });
 
             modelBuilder.Entity<News>()
-                .HasIndex(n => new { n.IsActive, n.ShowPopup, n.StartDate, n.EndDate });
+                .HasIndex(n => new { n.IsActive, n.ShowPopup, n.StartDate, n.EndDate, n.TargetRegNo, n.TargetRoute });
 
             // Configure relationships
             modelBuilder.Entity<SupplierLogin>()
@@ -279,6 +279,12 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             });
 
             modelBuilder.Entity<News>()
+                .HasOne(n => n.TargetSupplier)
+                .WithMany()
+                .HasForeignKey(n => n.TargetRegNo)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Notification>()
                 .HasOne(n => n.TargetSupplier)
                 .WithMany()
                 .HasForeignKey(n => n.TargetRegNo)

@@ -56,8 +56,9 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<DashboardNewsDto> CreateNewsAsync(CreateDashboardNewsDto request, string? createdBy)
         {
             ValidateNews(request.Title, GetNewsContent(request));
-            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            ValidateAudience(request.AudienceType, request.TargetRegNo, request.TargetRoute);
             var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var targetRoute = NormalizeTargetRoute(request.AudienceType, request.TargetRoute);
             var isActive = request.Active ?? request.IsActive;
 
             var now = DateTime.Now;
@@ -71,6 +72,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 StartDate = request.StartDate?.Date,
                 EndDate = request.ExpiryDate?.Date,
                 TargetRegNo = targetRegNo,
+                TargetRoute = targetRoute,
                 CreatedBy = CleanActor(createdBy),
                 CreatedAt = now
             };
@@ -85,7 +87,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                     news.Title,
                     news.Content,
                     NormalizeAudienceType(request.AudienceType),
-                    news.TargetRegNo);
+                    news.TargetRegNo,
+                    news.TargetRoute);
             }
 
             return ToNewsDto(news, 0);
@@ -94,8 +97,9 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<DashboardNewsDto?> UpdateNewsAsync(int id, UpdateDashboardNewsDto request)
         {
             ValidateNews(request.Title, GetNewsContent(request));
-            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            ValidateAudience(request.AudienceType, request.TargetRegNo, request.TargetRoute);
             var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var targetRoute = NormalizeTargetRoute(request.AudienceType, request.TargetRoute);
             var isActive = request.Active ?? request.IsActive;
 
             var news = await _context.News.FindAsync(id);
@@ -112,6 +116,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             news.StartDate = request.StartDate?.Date;
             news.EndDate = request.ExpiryDate?.Date;
             news.TargetRegNo = targetRegNo;
+            news.TargetRoute = targetRoute;
             news.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -127,6 +132,8 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 return false;
             }
+
+            EnsureCanDelete(news.CreatedAt, "News");
 
             var dismissedRows = await _context.NewsDismissed
                 .Where(x => x.NewsId == id)
@@ -176,8 +183,9 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<DashboardNotificationDto> CreateNotificationAsync(CreateDashboardNotificationDto request, string? createdBy)
         {
             ValidateNotification(request.Title, request.Message);
-            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            ValidateAudience(request.AudienceType, request.TargetRegNo, request.TargetRoute);
             var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var targetRoute = NormalizeTargetRoute(request.AudienceType, request.TargetRoute);
             var isActive = request.Active ?? request.IsActive;
 
             var now = DateTime.Now;
@@ -192,6 +200,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 StartDate = startDate,
                 EndDate = request.EndDate,
                 TargetRegNo = targetRegNo,
+                TargetRoute = targetRoute,
                 CreatedBy = CleanActor(createdBy),
                 CreatedAt = now
             };
@@ -207,7 +216,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                     notification.Message,
                     notification.Type,
                     NormalizeAudienceType(request.AudienceType),
-                    notification.TargetRegNo);
+                    notification.TargetRegNo,
+                    notification.TargetRoute);
             }
 
             return ToNotificationDto(notification, 0, 0);
@@ -216,8 +226,9 @@ namespace TeaFactorySupplierManagement.Application.Services
         public async Task<DashboardNotificationDto?> UpdateNotificationAsync(int id, UpdateDashboardNotificationDto request)
         {
             ValidateNotification(request.Title, request.Message);
-            ValidateAudience(request.AudienceType, request.TargetRegNo);
+            ValidateAudience(request.AudienceType, request.TargetRegNo, request.TargetRoute);
             var targetRegNo = NormalizeTargetRegNo(request.AudienceType, request.TargetRegNo);
+            var targetRoute = NormalizeTargetRoute(request.AudienceType, request.TargetRoute);
             var isActive = request.Active ?? request.IsActive;
 
             var notification = await _context.Notifications.FindAsync(id);
@@ -234,6 +245,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             notification.StartDate = request.Schedule ?? request.StartDate;
             notification.EndDate = request.EndDate;
             notification.TargetRegNo = targetRegNo;
+            notification.TargetRoute = targetRoute;
             notification.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -250,6 +262,8 @@ namespace TeaFactorySupplierManagement.Application.Services
             {
                 return false;
             }
+
+            EnsureCanDelete(notification.CreatedAt, "Notification");
 
             var readRows = await _context.NotificationRead
                 .Where(x => x.NotificationId == id)
@@ -284,8 +298,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                 ShowPopup = news.ShowPopup,
                 StartDate = news.StartDate?.ToString("yyyy-MM-dd"),
                 EndDate = endDate,
-                AudienceType = news.TargetRegNo.HasValue ? "SpecificSupplier" : "AllSuppliers",
+                AudienceType = GetAudienceType(news.TargetRegNo, news.TargetRoute),
                 TargetRegNo = news.TargetRegNo,
+                TargetRoute = news.TargetRoute,
                 CreatedBy = news.CreatedBy,
                 DismissedCount = dismissedCount
             };
@@ -310,7 +325,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 StartDate = startDate,
                 EndDate = notification.EndDate?.ToString("yyyy-MM-ddTHH:mm"),
                 TargetRegNo = notification.TargetRegNo,
-                AudienceType = notification.TargetRegNo.HasValue ? "SpecificSupplier" : "AllSuppliers",
+                TargetRoute = notification.TargetRoute,
+                AudienceType = GetAudienceType(notification.TargetRegNo, notification.TargetRoute),
                 CreatedBy = notification.CreatedBy,
                 ReadCount = readCount,
                 DismissedCount = dismissedCount
@@ -377,7 +393,10 @@ namespace TeaFactorySupplierManagement.Application.Services
         {
             return string.Equals(audienceType, "SpecificSupplier", StringComparison.OrdinalIgnoreCase)
                 ? "SpecificSupplier"
-                : "AllSuppliers";
+                : string.Equals(audienceType, "Route", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(audienceType, "RouteWise", StringComparison.OrdinalIgnoreCase)
+                    ? "Route"
+                    : "AllSuppliers";
         }
 
         private static int? NormalizeTargetRegNo(string? audienceType, object? targetRegNo)
@@ -388,6 +407,13 @@ namespace TeaFactorySupplierManagement.Application.Services
             }
 
             return ParseRegNo(targetRegNo);
+        }
+
+        private static string? NormalizeTargetRoute(string? audienceType, string? targetRoute)
+        {
+            return NormalizeAudienceType(audienceType) == "Route"
+                ? CleanOptional(targetRoute)
+                : null;
         }
 
         private static bool ShouldPublishNow(bool publishNow, bool isActive, DateTime? startDate, DateTime? endDate)
@@ -426,11 +452,16 @@ namespace TeaFactorySupplierManagement.Application.Services
             }
         }
 
-        private static void ValidateAudience(string? audienceType, object? targetRegNo)
+        private static void ValidateAudience(string? audienceType, object? targetRegNo, string? targetRoute)
         {
             if (NormalizeAudienceType(audienceType) == "SpecificSupplier" && !ParseRegNo(targetRegNo).HasValue)
             {
                 throw new ArgumentException("Target supplier registration number is required for specific supplier audience.");
+            }
+
+            if (NormalizeAudienceType(audienceType) == "Route" && string.IsNullOrWhiteSpace(targetRoute))
+            {
+                throw new ArgumentException("Target route is required for route audience.");
             }
         }
 
@@ -464,6 +495,29 @@ namespace TeaFactorySupplierManagement.Application.Services
             }
 
             return int.TryParse(Convert.ToString(value), out var parsed) && parsed > 0 ? parsed : null;
+        }
+
+        private static string GetAudienceType(int? targetRegNo, string? targetRoute)
+        {
+            if (targetRegNo.HasValue)
+            {
+                return "SpecificSupplier";
+            }
+
+            return string.IsNullOrWhiteSpace(targetRoute) ? "AllSuppliers" : "Route";
+        }
+
+        private static string? CleanOptional(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private static void EnsureCanDelete(DateTime createdAt, string itemName)
+        {
+            if (createdAt < DateTime.Now.AddHours(-24))
+            {
+                throw new InvalidOperationException($"{itemName} can only be deleted within 24 hours after creation.");
+            }
         }
     }
 }

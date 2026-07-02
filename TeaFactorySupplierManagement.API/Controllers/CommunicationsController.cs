@@ -67,13 +67,20 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpDelete("news/{id:int}")]
         public async Task<IActionResult> DeleteNews([FromRoute] int id)
         {
-            var deleted = await _communicationService.DeleteNewsAsync(id);
-            if (!deleted)
+            try
             {
-                return NotFound(new { message = "News item not found." });
-            }
+                var deleted = await _communicationService.DeleteNewsAsync(id);
+                if (!deleted)
+                {
+                    return NotFound(new { message = "News item not found." });
+                }
 
-            return Ok(new { message = "News deleted successfully." });
+                return Ok(new { message = "News deleted successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("notifications")]
@@ -119,13 +126,20 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpDelete("notifications/{id:int}")]
         public async Task<IActionResult> DeleteNotification([FromRoute] int id)
         {
-            var deleted = await _communicationService.DeleteNotificationAsync(id);
-            if (!deleted)
+            try
             {
-                return NotFound(new { message = "Notification not found." });
-            }
+                var deleted = await _communicationService.DeleteNotificationAsync(id);
+                if (!deleted)
+                {
+                    return NotFound(new { message = "Notification not found." });
+                }
 
-            return Ok(new { message = "Notification deleted successfully." });
+                return Ok(new { message = "Notification deleted successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         private string? GetDashboardUser()
