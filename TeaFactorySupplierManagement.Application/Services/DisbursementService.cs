@@ -735,7 +735,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                     ApprovedDate = ToDateKey(x.ApprovedAt ?? x.RequestDate),
                     ApprovedAmount = x.Amount,
                     Issued = record != null,
-                    PaymentMethod = record?.Method,
+                    PaymentMethod = GetQueuePaymentMethod(record, x.Supplier),
                     TrackingStatus = record?.CurrentStatus
                 };
             }).ToList();
@@ -766,7 +766,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                     ApprovedQty = x.Quantity,
                     Unit = x.Unit,
                     Issued = record != null,
-                    PaymentMethod = record?.Method,
+                    PaymentMethod = GetQueuePaymentMethod(record, x.Supplier),
                     TrackingStatus = record?.CurrentStatus
                 };
             }).ToList();
@@ -797,10 +797,20 @@ namespace TeaFactorySupplierManagement.Application.Services
                     ApprovedQty = x.Quantity,
                     Unit = x.Unit ?? "units",
                     Issued = record != null,
-                    PaymentMethod = record?.Method,
+                    PaymentMethod = GetQueuePaymentMethod(record, x.Supplier),
                     TrackingStatus = record?.CurrentStatus
                 };
             }).ToList();
+        }
+
+        private static string? GetQueuePaymentMethod(DisbursementRecord? record, RegSupplier? supplier)
+        {
+            if (!string.IsNullOrWhiteSpace(record?.Method))
+            {
+                return record.Method.Trim();
+            }
+
+            return CleanOptional(supplier?.PayMode) ?? CleanOptional(supplier?.PayMode_Temp);
         }
 
         private static IQueryable<T> ApplyQueueFilters<T>(IQueryable<T> query, string? route, DateTime? fromDate, DateTime? toDate)

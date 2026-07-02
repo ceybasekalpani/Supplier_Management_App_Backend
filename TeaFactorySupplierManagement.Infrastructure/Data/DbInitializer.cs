@@ -7,6 +7,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
     {
         public static async Task InitializeAsync(ApplicationDbContext context)
         {
+            await ResyncIdentitySeedsAsync(context);
+
             // Add factory setup if none exists
             if (!await context.FactorySetups.AnyAsync())
             {
@@ -96,6 +98,26 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             }
 
             await context.SaveChangesAsync();
+        }
+
+        private static async Task ResyncIdentitySeedsAsync(ApplicationDbContext context)
+        {
+            var identityReseedStatements = new[]
+            {
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_Disbursement_Records]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_Disbursement_Records]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_DeliveryNote_Header]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_DeliveryNote_Header]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_DeliveryNote_Detail]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_DeliveryNote_Detail]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_Code_Generation]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_Code_Generation]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_FactorySetup]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_FactorySetup]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_Notifications]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_Notifications]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[Supplier_Management_News]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[Supplier_Management_News]', RESEED) WITH NO_INFOMSGS; END",
+                "IF OBJECT_ID(N'[dbo].[supplier_dashboard_AdminLogin]', N'U') IS NOT NULL BEGIN DBCC CHECKIDENT ('[dbo].[supplier_dashboard_AdminLogin]', RESEED) WITH NO_INFOMSGS; END"
+            };
+
+            foreach (var sql in identityReseedStatements)
+            {
+                await context.Database.ExecuteSqlRawAsync(sql);
+            }
         }
     }
 }
