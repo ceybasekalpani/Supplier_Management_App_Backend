@@ -94,13 +94,60 @@ namespace TeaFactorySupplierManagement.Application.Services
             user.PhoneNo = CleanOptional(request.PhoneNo);
             user.Role = NormalizeRole(request.Role);
             user.IsActive = NormalizeStatus(request.Status) == "active";
-            user.AvatarBase64 = CleanOptional(request.Avatar);
+            if (request.Avatar != null)
+            {
+                user.AvatarBase64 = CleanOptional(request.Avatar);
+            }
             user.UpdatedAt = DateTime.UtcNow;
 
             if (!string.IsNullOrWhiteSpace(request.Password))
             {
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password.Trim());
             }
+
+            await _context.SaveChangesAsync();
+            return ToDto(user);
+        }
+
+        public async Task<string?> GetUserAvatarAsync(int id)
+        {
+            return await _context.SupplierDashboardAdminLogins
+                .AsNoTracking()
+                .Where(x => x.Id == id)
+                .Select(x => x.AvatarBase64)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<DashboardUserDto?> UpdateUserAvatarAsync(int id, string avatarUrl)
+        {
+            if (string.IsNullOrWhiteSpace(avatarUrl))
+            {
+                throw new ArgumentException("Profile image URL is required.");
+            }
+
+            var user = await _context.SupplierDashboardAdminLogins.FindAsync(id);
+            if (user == null)
+            {
+                return null;
+            }
+
+            user.AvatarBase64 = avatarUrl.Trim();
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return ToDto(user);
+        }
+
+        public async Task<DashboardUserDto?> ClearUserAvatarAsync(int id)
+        {
+            var user = await _context.SupplierDashboardAdminLogins.FindAsync(id);
+            if (user == null)
+            {
+                return null;
+            }
+
+            user.AvatarBase64 = null;
+            user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return ToDto(user);
@@ -143,7 +190,6 @@ namespace TeaFactorySupplierManagement.Application.Services
                 throw new InvalidOperationException("Email already exists.");
             }
         }
-
         private static DashboardUserDto ToDto(SupplierDashboardAdminLogin user)
         {
             return new DashboardUserDto
@@ -157,9 +203,12 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Role = user.Role,
                 Status = user.IsActive ? "active" : "inactive",
                 Avatar = user.AvatarBase64,
+                AvatarUrl = user.AvatarBase64,
+                ProfileImage = user.AvatarBase64,
                 IsSuperAdmin = IsSuperAdmin(user),
                 CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd"),
-                LastLoginAt = user.LastLoginAt?.ToString("yyyy-MM-ddTHH:mm:ss")
+                LastLoginAt = user.LastLoginAt?.ToString("yyyy-MM-ddTHH:mm:ss"),
+                UpdatedAt = user.UpdatedAt?.ToString("yyyy-MM-ddTHH:mm:ss")
             };
         }
 

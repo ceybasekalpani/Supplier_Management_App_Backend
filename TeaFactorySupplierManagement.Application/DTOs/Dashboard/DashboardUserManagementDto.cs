@@ -25,9 +25,12 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string Role { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string? Avatar { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? ProfileImage { get; set; }
         public bool IsSuperAdmin { get; set; }
         public string CreatedAt { get; set; } = string.Empty;
         public string? LastLoginAt { get; set; }
+         public string? UpdatedAt { get; set; }
     }
 
     public class CreateDashboardUserDto

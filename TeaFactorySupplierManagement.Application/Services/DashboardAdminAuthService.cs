@@ -72,6 +72,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 AdminId = admin.Id,
                 Username = admin.Username,
                 FullName = admin.FullName,
+                Avatar = admin.AvatarBase64,
+                ProfileImage = admin.AvatarBase64,
                 ExpiresAt = expiresAt,
                 IsSuperAdmin = IsSuperAdmin(admin),
                 Permissions = DashboardPermissionService.BuildPermissionKeys(permissions),

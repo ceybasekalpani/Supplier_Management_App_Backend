@@ -323,6 +323,8 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Role = user.Role,
                 Status = user.IsActive ? "active" : "inactive",
                 Avatar = user.AvatarBase64,
+                AvatarUrl = user.AvatarBase64,
+                ProfileImage = user.AvatarBase64,
                 IsSuperAdmin = IsSuperAdmin(user),
                 CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd"),
                 LastLoginAt = user.LastLoginAt?.ToString("yyyy-MM-ddTHH:mm:ss")

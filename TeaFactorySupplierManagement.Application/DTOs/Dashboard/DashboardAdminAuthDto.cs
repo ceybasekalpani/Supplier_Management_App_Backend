@@ -12,6 +12,8 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public int AdminId { get; set; }
         public string Username { get; set; } = string.Empty;
         public string? FullName { get; set; }
+        public string? Avatar { get; set; }
+        public string? ProfileImage { get; set; }
         public DateTime ExpiresAt { get; set; }
         public bool IsSuperAdmin { get; set; }
         public bool HasPermissionData { get; set; } = true;

@@ -37,6 +37,19 @@ namespace TeaFactorySupplierManagement.API.Services
             if (string.IsNullOrEmpty(extension)) extension = ".jpg";
             var storagePath = $"supplier-{regNo}/profile{extension}";
 
+            return await UploadImageAsync(storagePath, imageStream, contentType, allowLocalFallback: true);
+        }
+
+        public async Task<string> UploadDashboardUserProfileImageAsync(int userId, Stream imageStream, string fileName, string contentType)
+        {
+            var extension = NormalizeImageExtension(fileName, contentType);
+            var storagePath = $"dashboard-users/{userId}/{Guid.NewGuid():N}{extension}";
+
+            return await UploadImageAsync(storagePath, imageStream, contentType, allowLocalFallback: false);
+        }
+
+        private async Task<string> UploadImageAsync(string storagePath, Stream imageStream, string contentType, bool allowLocalFallback)
+        {
             using var memoryStream = new MemoryStream();
             await imageStream.CopyToAsync(memoryStream);
             var bytes = memoryStream.ToArray();
@@ -72,6 +85,11 @@ namespace TeaFactorySupplierManagement.API.Services
             }
             catch (HttpRequestException ex) when (ex.InnerException is SocketException || ex.Message.Contains("No such host", StringComparison.OrdinalIgnoreCase))
             {
+                if (!allowLocalFallback)
+                {
+                    throw new InvalidOperationException("Supabase is unreachable. Profile image was not saved.", ex);
+                }
+
                 _logger.LogWarning(ex, "Supabase is unreachable. Saving profile image locally instead.");
                 return await SaveProfileImageLocallyAsync(storagePath, bytes);
             }
@@ -118,7 +136,17 @@ namespace TeaFactorySupplierManagement.API.Services
             };
         }
 
-        public async Task<(Stream? ImageStream, string ContentType)> DownloadProfileImageAsync(string imageUrl)
+        public Task<(Stream? ImageStream, string ContentType)> DownloadProfileImageAsync(string imageUrl)
+        {
+            if (TryDecodeDataUri(imageUrl, out var dataStream, out var dataContentType))
+            {
+                return Task.FromResult<(Stream?, string)>((dataStream, dataContentType));
+            }
+
+            return DownloadProfileImageFromStorageAsync(imageUrl);
+        }
+
+        private async Task<(Stream? ImageStream, string ContentType)> DownloadProfileImageFromStorageAsync(string imageUrl)
         {
             var cleanUrl = imageUrl.Split('?')[0];
 
@@ -134,13 +162,20 @@ namespace TeaFactorySupplierManagement.API.Services
                 return (File.OpenRead(localPath), GetContentType(localPath));
             }
 
+            // The bucket is private, so the "public" object route always 400s here.
+            // Use "authenticated" instead — the service role key bypasses RLS on it.
+            var downloadUrl = cleanUrl.Replace(
+                "/storage/v1/object/public/",
+                "/storage/v1/object/authenticated/",
+                StringComparison.OrdinalIgnoreCase);
+
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
 
-            var response = await client.GetAsync(cleanUrl);
+            var response = await client.GetAsync(downloadUrl);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Supabase image download failed: {Status} for {Url}", response.StatusCode, cleanUrl);
+                _logger.LogWarning("Supabase image download failed: {Status} for {Url}", response.StatusCode, downloadUrl);
                 return (null, "image/jpeg");
             }
 
@@ -216,6 +251,41 @@ namespace TeaFactorySupplierManagement.API.Services
             return Path.Combine(webRoot, relativePath);
         }
 
+        private static bool TryDecodeDataUri(string imageUrl, out Stream? stream, out string contentType)
+        {
+            stream = null;
+            contentType = "image/jpeg";
+
+            if (string.IsNullOrWhiteSpace(imageUrl) || !imageUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var commaIndex = imageUrl.IndexOf(',');
+            if (commaIndex < 0)
+            {
+                return false;
+            }
+
+            var header = imageUrl[5..commaIndex];
+            var mediaType = header.Split(';')[0];
+            if (!string.IsNullOrWhiteSpace(mediaType))
+            {
+                contentType = mediaType;
+            }
+
+            try
+            {
+                var bytes = Convert.FromBase64String(imageUrl[(commaIndex + 1)..]);
+                stream = new MemoryStream(bytes);
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
         private static bool IsLocalProfileImageUrl(string imageUrl)
         {
             return imageUrl.StartsWith("/profile-images/", StringComparison.OrdinalIgnoreCase) ||
@@ -230,6 +300,22 @@ namespace TeaFactorySupplierManagement.API.Services
                 ".webp" => "image/webp",
                 ".gif" => "image/gif",
                 _ => "image/jpeg"
+            };
+        }
+
+        private static string NormalizeImageExtension(string fileName, string contentType)
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            if (extension is ".jpg" or ".jpeg" or ".png" or ".webp")
+            {
+                return extension;
+            }
+
+            return contentType.ToLowerInvariant() switch
+            {
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => ".jpg"
             };
         }
     }
