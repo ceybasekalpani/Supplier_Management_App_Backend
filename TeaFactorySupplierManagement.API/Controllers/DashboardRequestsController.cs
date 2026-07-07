@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using TeaFactorySupplierManagement.API.Extensions;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
+using TeaFactorySupplierManagement.Domain.Permissions;
 
 namespace TeaFactorySupplierManagement.API.Controllers
 {
@@ -11,11 +13,20 @@ namespace TeaFactorySupplierManagement.API.Controllers
     [Authorize(Policy = "DashboardAdmin")]
     public class DashboardRequestsController : ControllerBase
     {
-        private readonly IDashboardRequestService _dashboardRequestService;
+        private static readonly string[] RequestModules =
+        {
+            PermissionModules.CashRequests,
+            PermissionModules.FertilizerRequests,
+            PermissionModules.ItemRequests
+        };
 
-        public DashboardRequestsController(IDashboardRequestService dashboardRequestService)
+        private readonly IDashboardRequestService _dashboardRequestService;
+        private readonly IDashboardPermissionService _permissionService;
+
+        public DashboardRequestsController(IDashboardRequestService dashboardRequestService, IDashboardPermissionService permissionService)
         {
             _dashboardRequestService = dashboardRequestService;
+            _permissionService = permissionService;
         }
 
         [HttpGet]
@@ -25,6 +36,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
             [FromQuery] DateTime? fromDate,
             [FromQuery] DateTime? toDate)
         {
+            if (!await HasAnyRequestPermissionAsync(PermissionActions.View))
+            {
+                return Forbid();
+            }
+
             try
             {
                 var result = await _dashboardRequestService.GetRequestsAsync(status, search, fromDate, toDate);
@@ -76,31 +92,31 @@ namespace TeaFactorySupplierManagement.API.Controllers
             }
         }
 
-        [HttpGet("export")]
-        public async Task<IActionResult> ExportRequests(
-            [FromQuery] string format = "pdf",
-            [FromQuery] string? status = null,
-            [FromQuery] string? search = null,
-            [FromQuery] DateTime? fromDate = null,
-            [FromQuery] DateTime? toDate = null)
-        {
-            try
-            {
-                var file = await _dashboardRequestService.ExportRequestsAsync(format, status, search, fromDate, toDate);
-                return File(file.Content, file.ContentType, file.FileName);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
         private int? GetCurrentDashboardAdminId()
         {
             var adminIdClaim = User.FindFirst("DashboardAdminId")?.Value
                 ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             return int.TryParse(adminIdClaim, out var adminId) ? adminId : null;
+        }
+
+        private async Task<bool> HasAnyRequestPermissionAsync(string action)
+        {
+            var adminId = User.GetDashboardAdminId();
+            if (!adminId.HasValue)
+            {
+                return false;
+            }
+
+            foreach (var module in RequestModules)
+            {
+                if (await _permissionService.HasPermissionAsync(adminId.Value, $"{module}.{action}"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

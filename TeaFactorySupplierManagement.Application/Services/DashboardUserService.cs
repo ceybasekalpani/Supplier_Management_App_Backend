@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Domain.Entities;
+using TeaFactorySupplierManagement.Domain.Permissions;
 using TeaFactorySupplierManagement.Infrastructure.Data;
 
 namespace TeaFactorySupplierManagement.Application.Services
@@ -72,7 +73,6 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             _context.SupplierDashboardAdminLogins.Add(user);
             await _context.SaveChangesAsync();
-            await DashboardPermissionService.EnsureDefaultPermissionsAsync(_context, user);
 
             return ToDto(user);
         }
@@ -205,19 +205,11 @@ namespace TeaFactorySupplierManagement.Application.Services
                 Avatar = user.AvatarBase64,
                 AvatarUrl = user.AvatarBase64,
                 ProfileImage = user.AvatarBase64,
-                IsSuperAdmin = IsSuperAdmin(user),
+                IsSuperAdmin = PermissionEvaluationHelpers.IsSuperAdmin(user),
                 CreatedAt = user.CreatedAt.ToString("yyyy-MM-dd"),
                 LastLoginAt = user.LastLoginAt?.ToString("yyyy-MM-ddTHH:mm:ss"),
                 UpdatedAt = user.UpdatedAt?.ToString("yyyy-MM-ddTHH:mm:ss")
             };
-        }
-
-        private static bool IsSuperAdmin(SupplierDashboardAdminLogin user)
-        {
-            return user.Role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase) ||
-                   user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase) ||
-                   user.Username.Equals("mainadmin", StringComparison.OrdinalIgnoreCase) ||
-                   user.Username.Equals("main_admin", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void ValidateUser(string fullName, string email, string username, string? password, bool requirePassword)

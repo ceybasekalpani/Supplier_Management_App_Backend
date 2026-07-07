@@ -7,5 +7,6 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         Task<DashboardPermissionSettingsDto> GetSettingsAsync();
         Task<DashboardUserPermissionDto?> GetUserPermissionsAsync(int adminId);
         Task<DashboardUserPermissionDto?> SaveUserPermissionsAsync(int adminId, SaveDashboardUserPermissionsDto request);
+        Task<bool> HasPermissionAsync(int adminId, string permissionCode);
     }
 }

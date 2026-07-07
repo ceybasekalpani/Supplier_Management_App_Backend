@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Domain.Entities;
+using TeaFactorySupplierManagement.Domain.Permissions;
 
 namespace TeaFactorySupplierManagement.Infrastructure.Data
 {
@@ -8,6 +9,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public static async Task InitializeAsync(ApplicationDbContext context)
         {
             await ResyncIdentitySeedsAsync(context);
+            await SeedPermissionCatalogAsync(context);
 
             // Add factory setup if none exists
             if (!await context.FactorySetups.AnyAsync())
@@ -98,6 +100,62 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             }
 
             await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedPermissionCatalogAsync(ApplicationDbContext context)
+        {
+            var catalogCodes = PermissionCatalog.All
+                .Select(definition => definition.Code)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var existingPermissions = await context.Permissions.ToListAsync();
+            var existingCodes = existingPermissions
+                .Select(p => p.Code)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var missing = PermissionCatalog.All
+                .Where(definition => !existingCodes.Contains(definition.Code))
+                .Select(definition => new Permission
+                {
+                    Module = definition.Module,
+                    ModuleLabel = definition.ModuleLabel,
+                    Action = definition.Action,
+                    Code = definition.Code,
+                    DisplayName = definition.ActionLabel,
+                    Description = definition.Description,
+                    SortOrder = definition.SortOrder,
+                    CreatedAt = DateTime.UtcNow
+                })
+                .ToList();
+
+            if (missing.Count > 0)
+            {
+                context.Permissions.AddRange(missing);
+            }
+
+            // Remove permission rows for actions that no longer exist in PermissionCatalog
+            // (e.g. after a module's action list is trimmed), along with any admin grants
+            // that reference them, so the catalog served to the frontend never drifts from
+            // what PermissionCatalog.cs actually defines.
+            var orphaned = existingPermissions
+                .Where(p => !catalogCodes.Contains(p.Code))
+                .ToList();
+
+            if (orphaned.Count > 0)
+            {
+                var orphanedIds = orphaned.Select(p => p.Id).ToList();
+                var orphanedGrants = await context.SupplierDashboardAdminPermissions
+                    .Where(grant => orphanedIds.Contains(grant.PermissionId))
+                    .ToListAsync();
+
+                context.SupplierDashboardAdminPermissions.RemoveRange(orphanedGrants);
+                context.Permissions.RemoveRange(orphaned);
+            }
+
+            if (missing.Count > 0 || orphaned.Count > 0)
+            {
+                await context.SaveChangesAsync();
+            }
         }
 
         private static async Task ResyncIdentitySeedsAsync(ApplicationDbContext context)

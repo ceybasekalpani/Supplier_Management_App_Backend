@@ -857,6 +857,63 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.ToTable("Supplier_Management_Notification_Read", (string)null);
                 });
 
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ModuleLabel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("Module", "Action")
+                        .IsUnique();
+
+                    b.ToTable("supplier_dashboard_Permissions", (string)null);
+                });
+
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", b =>
                 {
                     b.Property<int>("RegNo")
@@ -1088,26 +1145,22 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsEnabled")
+                    b.Property<bool>("IsGranted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<string>("ModuleId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("SubPermissionsJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AdminId", "ModuleId")
+                    b.HasIndex("PermissionId");
+
+                    b.HasIndex("AdminId", "PermissionId")
                         .IsUnique();
 
                     b.ToTable("supplier_dashboard_AdminPermissions", (string)null);
@@ -1594,7 +1647,15 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("TeaFactorySupplierManagement.Domain.Entities.Permission", "Permission")
+                        .WithMany("AdminGrants")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Admin");
+
+                    b.Navigation("Permission");
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.SupplierLogin", b =>
@@ -1646,6 +1707,11 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Navigation("DismissedBy");
 
                     b.Navigation("ReadBy");
+                });
+
+            modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("AdminGrants");
                 });
 
             modelBuilder.Entity("TeaFactorySupplierManagement.Domain.Entities.RegSupplier", b =>

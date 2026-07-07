@@ -28,6 +28,7 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         public DbSet<UserSettings> UserSettings { get; set; }
         public DbSet<FertilizerItemStore> FertilizerItemStore { get; set; }
         public DbSet<SupplierDashboardAdminLogin> SupplierDashboardAdminLogins { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
         public DbSet<SupplierDashboardAdminPermission> SupplierDashboardAdminPermissions { get; set; }
         public DbSet<DisbursementRecord> DisbursementRecords { get; set; }
         public DbSet<MobileDeviceToken> MobileDeviceTokens { get; set; }
@@ -208,11 +209,23 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            modelBuilder.Entity<Permission>(entity =>
+            {
+                entity.ToTable("supplier_dashboard_Permissions");
+                entity.HasIndex(p => p.Code).IsUnique();
+                entity.HasIndex(p => new { p.Module, p.Action }).IsUnique();
+            });
+
             modelBuilder.Entity<SupplierDashboardAdminPermission>(entity =>
             {
                 entity.ToTable("supplier_dashboard_AdminPermissions");
-                entity.HasIndex(p => new { p.AdminId, p.ModuleId }).IsUnique();
-                entity.Property(p => p.IsEnabled).HasDefaultValue(false);
+                entity.HasIndex(p => new { p.AdminId, p.PermissionId }).IsUnique();
+                entity.Property(p => p.IsGranted).HasDefaultValue(false);
+
+                entity.HasOne(p => p.Permission)
+                    .WithMany(perm => perm.AdminGrants)
+                    .HasForeignKey(p => p.PermissionId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<DisbursementRecord>(entity =>

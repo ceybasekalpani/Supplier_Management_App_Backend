@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeaFactorySupplierManagement.Application.DTOs.Dashboard;
 using TeaFactorySupplierManagement.Application.Interfaces;
+using TeaFactorySupplierManagement.Domain.Permissions;
 
 namespace TeaFactorySupplierManagement.API.Controllers
 {
@@ -14,21 +15,29 @@ namespace TeaFactorySupplierManagement.API.Controllers
         private const long MaxProfileImageRequestBytes = MaxProfileImageSizeBytes + (512 * 1024);
         private readonly IDashboardUserService _dashboardUserService;
         private readonly ISupabaseStorageService _storageService;
+        private readonly IDashboardPermissionService _permissionService;
         private readonly ILogger<DashboardUsersController> _logger;
 
         public DashboardUsersController(
             IDashboardUserService dashboardUserService,
             ISupabaseStorageService storageService,
+            IDashboardPermissionService permissionService,
             ILogger<DashboardUsersController> logger)
         {
             _dashboardUserService = dashboardUserService;
             _storageService = storageService;
+            _permissionService = permissionService;
             _logger = logger;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] string? status)
         {
+            if (!await HasPermissionAsync(PermissionActions.View))
+            {
+                return Forbid();
+            }
+
             var result = await _dashboardUserService.GetUsersAsync(search, status);
             return Ok(result);
         }
@@ -36,6 +45,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] CreateDashboardUserDto request)
         {
+            if (!await HasPermissionAsync(PermissionActions.Create))
+            {
+                return Forbid();
+            }
+
             try
             {
                 var result = await _dashboardUserService.CreateUserAsync(request);
@@ -54,6 +68,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateUser([FromRoute] int id, [FromBody] UpdateDashboardUserDto request)
         {
+            if (!await HasPermissionAsync(PermissionActions.Update))
+            {
+                return Forbid();
+            }
+
             try
             {
                 var result = await _dashboardUserService.UpdateUserAsync(id, request);
@@ -77,6 +96,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteUser([FromRoute] int id)
         {
+            if (!await HasPermissionAsync(PermissionActions.Delete))
+            {
+                return Forbid();
+            }
+
             try
             {
                 var deleted = await _dashboardUserService.DeleteUserAsync(id, GetCurrentAdminId());
@@ -98,6 +122,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [RequestFormLimits(MultipartBodyLengthLimit = MaxProfileImageRequestBytes)]
         public async Task<IActionResult> UpdateProfileImage([FromRoute] int id, [FromForm(Name = "image")] IFormFile? image)
         {
+            if (!await HasPermissionAsync(PermissionActions.Update))
+            {
+                return Forbid();
+            }
+
             var profileImage = ResolveProfileImageFile(image);
             var validationError = await ValidateProfileImageAsync(profileImage);
             if (validationError != null)
@@ -160,6 +189,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpDelete("{id:int}/profile-image")]
         public async Task<IActionResult> DeleteProfileImage([FromRoute] int id)
         {
+            if (!await HasPermissionAsync(PermissionActions.Update))
+            {
+                return Forbid();
+            }
+
             var oldAvatarUrl = await _dashboardUserService.GetUserAvatarAsync(id);
             var result = await _dashboardUserService.ClearUserAvatarAsync(id);
             if (result == null)
@@ -179,6 +213,12 @@ namespace TeaFactorySupplierManagement.API.Controllers
         {
             var claim = User.FindFirst("DashboardAdminId")?.Value;
             return int.TryParse(claim, out var id) ? id : null;
+        }
+
+        private async Task<bool> HasPermissionAsync(string action)
+        {
+            var adminId = GetCurrentAdminId();
+            return adminId.HasValue && await _permissionService.HasPermissionAsync(adminId.Value, $"{PermissionModules.UserManagement}.{action}");
         }
 
         private IFormFile? ResolveProfileImageFile(IFormFile? image)
