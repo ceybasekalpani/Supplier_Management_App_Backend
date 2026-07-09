@@ -10,5 +10,6 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         Task<bool> IsCashRequestEnabledAsync();
         Task<bool> IsItemRequestEnabledAsync();
         Task<bool> IsFertilizerRequestEnabledAsync();
+        Task<FactorySetupDto> UpdateSalaryDateAsync(DateTime salaryDate);
     }
 }

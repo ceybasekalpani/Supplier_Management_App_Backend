@@ -46,7 +46,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             if (existingSettings != null)
             {
-                // Update existing - only update provided fields
+                
                 if (settings.Theme != null)
                     existingSettings.Theme = settings.Theme;
 

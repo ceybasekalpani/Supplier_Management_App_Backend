@@ -84,6 +84,9 @@ namespace TeaFactorySupplierManagement.Domain.Permissions
                 (PermissionActions.View, "View Permissions", "View dashboard user permission assignments"),
                 (PermissionActions.Assign, "Assign Permissions", "Grant or revoke module and action permissions for dashboard users"));
 
+            AddModule(PermissionModules.Settings, "Settings", "Manage general application settings",
+                (PermissionActions.Update, "Update Settings", "Update global settings such as the salary date used for advance eligibility"));
+
             return definitions;
         }
     }

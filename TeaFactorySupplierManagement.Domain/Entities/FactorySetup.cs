@@ -20,5 +20,7 @@ namespace TeaFactorySupplierManagement.Domain.Entities
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal? AdvanceLimit { get; set; }
+
+        public DateTime? SalaryDate { get; set; }
     }
 }

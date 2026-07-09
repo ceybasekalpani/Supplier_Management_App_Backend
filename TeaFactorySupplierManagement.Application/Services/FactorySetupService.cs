@@ -66,5 +66,25 @@ namespace TeaFactorySupplierManagement.Application.Services
             var setup = await _context.FactorySetups.FirstOrDefaultAsync();
             return setup?.IsFertilizerRequest ?? true;
         }
+
+        public async Task<FactorySetupDto> UpdateSalaryDateAsync(DateTime salaryDate)
+        {
+            var setup = await _context.FactorySetups.FirstOrDefaultAsync();
+
+            if (setup == null)
+            {
+                setup = new FactorySetup
+                {
+                    FactoryName = "Tea Factory",
+                    CreatedAt = DateTime.UtcNow,
+                };
+                _context.FactorySetups.Add(setup);
+            }
+
+            setup.SalaryDate = salaryDate;
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<FactorySetupDto>(setup);
+        }
     }
 }

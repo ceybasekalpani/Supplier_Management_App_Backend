@@ -8,6 +8,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Factory
         public bool IsCashRequest { get; set; }
         public bool IsItemRequest { get; set; }
         public bool IsFertilizerRequest { get; set; }
+        public DateTime? SalaryDate { get; set; }
     }
 
     public class FactoryFeaturesDto
@@ -16,5 +17,10 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Factory
         public bool IsCashRequestEnabled { get; set; }
         public bool IsItemRequestEnabled { get; set; }
         public bool IsFertilizerRequestEnabled { get; set; }
+    }
+
+    public class UpdateSalaryDateDto
+    {
+        public DateTime SalaryDate { get; set; }
     }
 }

@@ -423,6 +423,9 @@ namespace TeaFactorySupplierManagement.Infrastructure.Migrations
                     b.Property<bool>("IsSuper")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("SalaryDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 

@@ -1,9 +1,6 @@
 namespace TeaFactorySupplierManagement.Domain.Permissions
 {
-    /// <summary>
-    /// Canonical module codes for the dashboard permission catalog. Every permission
-    /// belongs to exactly one of these modules (see <see cref="PermissionCatalog"/>).
-    /// </summary>
+   
     public static class PermissionModules
     {
         public const string Dashboard = "dashboard";
@@ -19,5 +16,6 @@ namespace TeaFactorySupplierManagement.Domain.Permissions
         public const string Notifications = "notifications";
         public const string UserManagement = "userManagement";
         public const string PermissionManagement = "permissionManagement";
+        public const string Settings = "settings";
     }
 }
