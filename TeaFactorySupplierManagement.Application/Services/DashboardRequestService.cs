@@ -20,17 +20,20 @@ namespace TeaFactorySupplierManagement.Application.Services
         private readonly ApplicationDbContext _context;
         private readonly IFirebasePushService _firebasePushService;
         private readonly IDashboardPermissionService _permissionService;
+        private readonly ICashRequestService _cashRequestService;
         private readonly ILogger<DashboardRequestService> _logger;
 
         public DashboardRequestService(
             ApplicationDbContext context,
             IFirebasePushService firebasePushService,
             IDashboardPermissionService permissionService,
+            ICashRequestService cashRequestService,
             ILogger<DashboardRequestService> logger)
         {
             _context = context;
             _firebasePushService = firebasePushService;
             _permissionService = permissionService;
+            _cashRequestService = cashRequestService;
             _logger = logger;
         }
 
@@ -70,6 +73,15 @@ namespace TeaFactorySupplierManagement.Application.Services
                 }
 
                 await EnsureStatusChangeAllowedAsync(request.Status, normalizedStatus, reviewedByAdminId, normalizedType);
+
+                if (normalizedStatus == "approved" &&
+                    string.Equals(request.RequestType?.Trim(), "ADVANCE", StringComparison.OrdinalIgnoreCase))
+                {
+                    var limit = await _cashRequestService.GetAdvanceLimitAsync(request.RegNo, DateTime.Today);
+                    if (limit.HasValue && request.Amount > limit.Value)
+                        throw new InvalidOperationException(
+                            $"Cannot approve: requested amount (Rs. {request.Amount:N2}) exceeds the supplier's maximum advance limit of Rs. {limit.Value:N2}.");
+                }
 
                 var previousStatus = request.Status;
                 request.Status = normalizedStatus;

@@ -22,11 +22,16 @@ namespace TeaFactorySupplierManagement.API.Controllers
 
         private readonly IDashboardRequestService _dashboardRequestService;
         private readonly IDashboardPermissionService _permissionService;
+        private readonly ICashRequestService _cashRequestService;
 
-        public DashboardRequestsController(IDashboardRequestService dashboardRequestService, IDashboardPermissionService permissionService)
+        public DashboardRequestsController(
+            IDashboardRequestService dashboardRequestService,
+            IDashboardPermissionService permissionService,
+            ICashRequestService cashRequestService)
         {
             _dashboardRequestService = dashboardRequestService;
             _permissionService = permissionService;
+            _cashRequestService = cashRequestService;
         }
 
         [HttpGet]
@@ -86,10 +91,38 @@ namespace TeaFactorySupplierManagement.API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (UnauthorizedAccessException)
             {
                 return Forbid();
             }
+        }
+
+        [HttpGet("advance-limit/{regNo:int}")]
+        public async Task<IActionResult> GetAdvanceLimit([FromRoute] int regNo, [FromQuery] DateTime? salaryDate)
+        {
+            if (!await HasAnyRequestPermissionAsync(PermissionActions.View))
+            {
+                return Forbid();
+            }
+
+            var limit = await _cashRequestService.GetAdvanceLimitAsync(regNo, salaryDate ?? DateTime.Today);
+            return Ok(new { regNo, limit });
+        }
+
+        [HttpGet("advance-limits")]
+        public async Task<IActionResult> GetAdvanceLimits([FromQuery] DateTime? salaryDate)
+        {
+            if (!await HasAnyRequestPermissionAsync(PermissionActions.View))
+            {
+                return Forbid();
+            }
+
+            var limits = await _cashRequestService.GetAdvanceLimitsForAllSuppliersAsync(salaryDate ?? DateTime.Today);
+            return Ok(limits);
         }
 
         private int? GetCurrentDashboardAdminId()

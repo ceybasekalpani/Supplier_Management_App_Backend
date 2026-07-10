@@ -13,6 +13,8 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
         // Existing tables - use existing database tables
         public DbSet<RegSupplier> RegSuppliers { get; set; }
         public DbSet<TrLeafCollectionTemp> TrLeafCollectionsTemp { get; set; }
+        public DbSet<TrLeafCollection> TrLeafCollections { get; set; }
+        public DbSet<RegSettings> RegSettings { get; set; }
 
         // New tables
         public DbSet<SupplierLogin> SupplierLogins { get; set; }
@@ -56,6 +58,20 @@ namespace TeaFactorySupplierManagement.Infrastructure.Data
             {
                 entity.ToTable("Tr_LeafCollection_Temp");
                 entity.HasKey(e => e.Ind);
+            });
+
+            // Configure TrLeafCollection - use existing (external) table, read-only for advance-limit calc
+            modelBuilder.Entity<TrLeafCollection>(entity =>
+            {
+                entity.ToTable("Tr_LeafCollection", tb => tb.ExcludeFromMigrations());
+                entity.HasKey(e => e.Ind);
+            });
+
+            // Configure RegSettings - existing (external), single-row global config table
+            modelBuilder.Entity<RegSettings>(entity =>
+            {
+                entity.ToTable("Reg_Settings", tb => tb.ExcludeFromMigrations());
+                entity.HasNoKey();
             });
 
             // Configure NewsDismissed composite key

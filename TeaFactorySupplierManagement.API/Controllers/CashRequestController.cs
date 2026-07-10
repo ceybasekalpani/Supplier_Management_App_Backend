@@ -58,16 +58,23 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRequest(int id, [FromBody] UpdateCashRequestDto request)
         {
-            var result = await _cashRequestService.UpdateRequestStatusAsync(
-                id,
-                request.Status ?? "pending",
-                request.ApprovedBy,
-                request.Remarks);
+            try
+            {
+                var result = await _cashRequestService.UpdateRequestStatusAsync(
+                    id,
+                    request.Status ?? "pending",
+                    request.ApprovedBy,
+                    request.Remarks);
 
-            if (!result)
-                return NotFound();
+                if (!result)
+                    return NotFound();
 
-            return Ok(new { message = "Request updated successfully" });
+                return Ok(new { message = "Request updated successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
@@ -87,9 +94,13 @@ namespace TeaFactorySupplierManagement.API.Controllers
         }
 
         [HttpGet("advance-limit")]
-        public async Task<IActionResult> GetAdvanceLimit()
+        public async Task<IActionResult> GetAdvanceLimit([FromQuery] DateTime? salaryDate)
         {
-            var limit = await _cashRequestService.GetAdvanceLimitAsync();
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
+                return Unauthorized();
+
+            var limit = await _cashRequestService.GetAdvanceLimitAsync(regNo, salaryDate ?? DateTime.Today);
             return Ok(new { limit });
         }
     }

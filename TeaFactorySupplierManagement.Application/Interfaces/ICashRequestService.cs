@@ -10,6 +10,7 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
     Task<bool> UpdateRequestStatusAsync(int id, string status, string? approvedBy = null, string? remarks = null);
     Task<bool> DeleteRequestAsync(int id);
     Task<bool> IsCashRequestEnabledAsync();
-    Task<decimal?> GetAdvanceLimitAsync();
+    Task<decimal?> GetAdvanceLimitAsync(int regNo, DateTime salaryDate);
+    Task<List<SupplierAdvanceLimitDto>> GetAdvanceLimitsForAllSuppliersAsync(DateTime salaryDate);
 }
 }

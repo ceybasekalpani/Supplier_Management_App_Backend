@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Globalization;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TeaFactorySupplierManagement.Application.DTOs.Requests;
 using TeaFactorySupplierManagement.Application.Interfaces;
@@ -43,6 +44,14 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (!await IsCashRequestEnabledAsync())
                 throw new InvalidOperationException("Cash request feature is not enabled");
 
+            if (IsAdvanceType(request.RequestType))
+            {
+                var limit = await GetAdvanceLimitAsync(regNo, DateTime.Today);
+                if (limit.HasValue && request.Amount > limit.Value)
+                    throw new InvalidOperationException(
+                        $"Requested amount exceeds your maximum advance limit of Rs. {limit.Value:N2}.");
+            }
+
             var now = DateTime.Now;
 
             // Auto-generate request number
@@ -72,6 +81,14 @@ namespace TeaFactorySupplierManagement.Application.Services
         {
             var request = await _context.CashRequests.FindAsync(id);
             if (request == null) return false;
+
+            if (status == "approved" && IsAdvanceType(request.RequestType))
+            {
+                var limit = await GetAdvanceLimitAsync(request.RegNo, DateTime.Today);
+                if (limit.HasValue && request.Amount > limit.Value)
+                    throw new InvalidOperationException(
+                        $"Cannot approve: requested amount exceeds the supplier's maximum advance limit of Rs. {limit.Value:N2}.");
+            }
 
             request.Status = status;
             request.UpdatedAt = DateTime.Now;
@@ -107,11 +124,97 @@ namespace TeaFactorySupplierManagement.Application.Services
             return factorySetup?.IsCashRequest ?? true;
         }
 
-        public async Task<decimal?> GetAdvanceLimitAsync()
+        public async Task<decimal?> GetAdvanceLimitAsync(int regNo, DateTime salaryDate)
         {
-            var factorySetup = await _context.FactorySetups.FirstOrDefaultAsync();
-            return factorySetup?.AdvanceLimit;
+            var settings = await _context.RegSettings.FirstOrDefaultAsync();
+            if (settings == null) return null;
+
+            var supplier = await _context.RegSuppliers.FirstOrDefaultAsync(s => s.RegNo == regNo);
+            if (supplier == null) return null;
+
+            var (activeMonth, nextMonth, cutoffDay) = DeriveSalaryPeriod(salaryDate);
+
+            // The advance rates in Reg_Settings are only valid for the period they were configured
+            // for. Refuse to apply them to a different salary period rather than silently using
+            // stale rates.
+            if (settings.ActiveMonth != activeMonth || settings.NextMonth != nextMonth)
+                return null;
+
+            var rows = await _context.TrLeafCollections
+                .Where(l => l.RegNo == regNo && l.Route == supplier.Route &&
+                    ((l.MonthName == activeMonth && l.DayNo >= cutoffDay) ||
+                     (l.MonthName == nextMonth && l.DayNo < cutoffDay)))
+                .ToListAsync();
+
+            return CalculateAdvanceLimit(rows, activeMonth, nextMonth, settings);
         }
+
+        public async Task<List<SupplierAdvanceLimitDto>> GetAdvanceLimitsForAllSuppliersAsync(DateTime salaryDate)
+        {
+            var settings = await _context.RegSettings.FirstOrDefaultAsync();
+            if (settings == null) return new List<SupplierAdvanceLimitDto>();
+
+            var (activeMonth, nextMonth, cutoffDay) = DeriveSalaryPeriod(salaryDate);
+
+            // The advance rates in Reg_Settings are only valid for the period they were configured
+            // for. Refuse to apply them to a different salary period rather than silently using
+            // stale rates.
+            if (settings.ActiveMonth != activeMonth || settings.NextMonth != nextMonth)
+                return new List<SupplierAdvanceLimitDto>();
+
+            // Join to Reg_Supplier to restrict each collection row to the supplier's own route
+            // (a RegNo can otherwise appear against more than one route in Tr_LeafCollection).
+            var rows = await (
+                from l in _context.TrLeafCollections
+                join s in _context.RegSuppliers on l.RegNo equals s.RegNo
+                where l.RegNo != null && l.Route == s.Route &&
+                    ((l.MonthName == activeMonth && l.DayNo >= cutoffDay) ||
+                     (l.MonthName == nextMonth && l.DayNo < cutoffDay))
+                select l
+            ).ToListAsync();
+
+            if (rows.Count == 0) return new List<SupplierAdvanceLimitDto>();
+
+            return rows
+                .GroupBy(l => l.RegNo!.Value)
+                .Select(g => new SupplierAdvanceLimitDto
+                {
+                    RegNo = g.Key,
+                    SupplierName = g.First().RegName ?? string.Empty,
+                    MaxAdvanceLimit = CalculateAdvanceLimit(g, activeMonth, nextMonth, settings)
+                })
+                .OrderBy(x => x.RegNo)
+                .ToList();
+        }
+
+        private static (string ActiveMonth, string NextMonth, int CutoffDay) DeriveSalaryPeriod(DateTime salaryDate)
+        {
+            var activeMonth = salaryDate.ToString("MMM-yyyy", CultureInfo.InvariantCulture);
+            var nextMonth = salaryDate.AddMonths(1).ToString("MMM-yyyy", CultureInfo.InvariantCulture);
+            return (activeMonth, nextMonth, salaryDate.Day);
+        }
+
+        private static decimal CalculateAdvanceLimit(
+            IEnumerable<TrLeafCollection> rows, string activeMonth, string nextMonth, RegSettings settings)
+        {
+            static decimal NetOf(IEnumerable<TrLeafCollection> g) =>
+                g.Sum(x => x.GrossQty ?? 0) - g.Sum(x => x.WaterWgt ?? 0) - g.Sum(x => x.BagWgt ?? 0)
+                - g.Sum(x => x.CoarseWgt ?? 0) - g.Sum(x => x.BoiledWgt ?? 0) - g.Sum(x => x.RejectedWgt ?? 0);
+
+            var activeRows = rows.Where(l => l.MonthName == activeMonth);
+            var nextRows = rows.Where(l => l.MonthName == nextMonth);
+
+            var normalActive = NetOf(activeRows.Where(l => l.LeafType != "Super"));
+            var superActive = NetOf(activeRows.Where(l => l.LeafType == "Super"));
+            var normalNext = NetOf(nextRows.Where(l => l.LeafType != "Super"));
+            var superNext = NetOf(nextRows.Where(l => l.LeafType == "Super"));
+
+            return (settings.ActAdvRate * normalActive) + (settings.ActAdvRate_Super * superActive)
+                 + (settings.NxtAdvRate * normalNext) + (settings.NxtAdvRate_Super * superNext);
+        }
+
+        private static bool IsAdvanceType(string requestType) =>
+            string.Equals(requestType?.Trim(), "ADVANCE", StringComparison.OrdinalIgnoreCase);
 
         private async Task<string> GenerateRequestNumberAsync(string requestType)
         {

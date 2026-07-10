@@ -35,4 +35,11 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Requests
         public string? ApprovedBy { get; set; }
         public string? Remarks { get; set; }
     }
+
+    public class SupplierAdvanceLimitDto
+    {
+        public int RegNo { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public decimal MaxAdvanceLimit { get; set; }
+    }
 }
