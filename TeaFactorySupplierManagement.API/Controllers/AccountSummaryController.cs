@@ -5,10 +5,7 @@ using TeaFactorySupplierManagement.Infrastructure.Data;
 
 namespace TeaFactorySupplierManagement.API.Controllers
 {
-    /// <summary>
-    /// Returns a per-month summary of cash / fertilizer / item requests
-    /// so the mobile app can show a "Monthly Account Summary" view.
-    /// </summary>
+    
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -27,21 +24,14 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return int.TryParse(claim, out int regNo) ? regNo : null;
         }
 
-        /// <summary>
-        /// GET api/accountsummary/monthly-requests?months=6
-        /// Returns one summary object per calendar month for the last N months
-        /// (default 6, max 24). Each object contains totals for cash,
-        /// fertilizer and item requests. Individual requests now include
-        /// a full requestDate (ISO 8601) so the mobile client can display
-        /// the exact day the request was created.
-        /// </summary>
+      
         [HttpGet("monthly-requests")]
         public async Task<IActionResult> GetMonthlyRequestSummary([FromQuery] int months = 6)
         {
             var regNo = GetCurrentRegNo();
             if (regNo == null) return Unauthorized();
 
-            // Clamp to a sensible range
+          
             if (months < 1)  months = 1;
             if (months > 24) months = 24;
 
@@ -60,8 +50,6 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 })
                 .ToList();
 
-            // Pull all requests for this supplier in bulk (one query each) then
-            // group in memory to avoid N+1.
             var cashRequests = await _context.CashRequests
                 .Where(r => r.RegNo == regNo
                          && r.RequestMonth >= today.AddMonths(-months).Date)

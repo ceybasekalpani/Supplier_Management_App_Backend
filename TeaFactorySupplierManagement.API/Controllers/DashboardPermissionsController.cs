@@ -34,8 +34,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpGet("{adminId:int}")]
         public async Task<IActionResult> GetUserPermissions([FromRoute] int adminId)
         {
-            // Every admin may always read their own permission set (needed to render their
-            // own UI) - viewing someone else's requires permissionManagement.view.
+        
             var isOwnPermissions = User.GetDashboardAdminId() == adminId;
             if (!isOwnPermissions && !await HasPermissionAsync(PermissionActions.View))
             {
