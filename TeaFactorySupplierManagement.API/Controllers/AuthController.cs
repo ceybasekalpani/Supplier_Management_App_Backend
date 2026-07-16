@@ -103,7 +103,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
 
             return Ok(new { message = "Password changed successfully" });
         }
- 
+
         [Authorize]
         [HttpPost("setup-pin")]
         public async Task<IActionResult> SetupPin([FromBody] SetupPinDto request)
