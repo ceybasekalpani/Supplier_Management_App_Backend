@@ -51,6 +51,15 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         [MaxLength(15)]
         public string? TelNo_3 { get; set; }
 
+        [Column("Land_Acre")]
+        public int? Land_Acre { get; set; }
+
+        [Column("Land_Rood")]
+        public int? Land_Rood { get; set; }
+
+        [Column("Land_Perch")]
+        public int? Land_Perch { get; set; }
+
         [Column("Active")]
         public bool? Active { get; set; }
 
@@ -135,7 +144,6 @@ namespace TeaFactorySupplierManagement.Domain.Entities
         public virtual ICollection<NotificationDismissed> NotificationDismissed { get; set; } = new List<NotificationDismissed>();
     }
 }
-
 
 
 

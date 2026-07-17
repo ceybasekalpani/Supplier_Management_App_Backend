@@ -11,7 +11,7 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Auth
         public List<RegistrationDto> Registrations { get; set; } = new List<RegistrationDto>();
         public UserSettingsDto? Settings { get; set; }
         public bool HasPinSet { get; set; }
-        public bool IsCreatePin { get; set; } // Added this property
+        public bool IsCreatePin { get; set; } 
     }
 
     public class RegistrationDto
@@ -20,5 +20,8 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Auth
         public string Route { get; set; } = string.Empty;
         public string? BankName { get; set; }
         public string? AccountNumber { get; set; }
+        public int? LandAcre { get; set; }
+        public int? LandRood { get; set; }
+        public int? LandPerch { get; set; }
     }
 }

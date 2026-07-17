@@ -17,5 +17,6 @@ namespace TeaFactorySupplierManagement.Application.Interfaces
         
         // New Method
         Task<bool> ChangePinAsync(int regNo, string currentPin, string newPin);
+        Task<bool> UpdateLandInfoAsync(int regNo, LandInfoDto request);
     }
 }

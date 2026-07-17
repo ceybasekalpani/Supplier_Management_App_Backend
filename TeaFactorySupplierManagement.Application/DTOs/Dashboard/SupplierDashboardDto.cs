@@ -17,6 +17,9 @@ namespace TeaFactorySupplierManagement.Application.DTOs.Dashboard
         public string? Phone2 { get; set; }
         public string? Phone3 { get; set; }
         public string Address { get; set; } = string.Empty;
+        public int? LandAcre { get; set; }
+        public int? LandRood { get; set; }
+        public int? LandPerch { get; set; }
         public string Bank { get; set; } = string.Empty;
         public string Branch { get; set; } = string.Empty;
         public string Payment { get; set; } = string.Empty;

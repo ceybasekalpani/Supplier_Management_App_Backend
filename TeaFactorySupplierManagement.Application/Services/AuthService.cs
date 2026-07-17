@@ -116,7 +116,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                     RegNo         = r.RegNo.ToString(),
                     Route         = r.Route ?? string.Empty,
                     BankName      = r.BankName,
-                    AccountNumber = r.AccCode
+                    AccountNumber = r.AccCode,
+                    LandAcre      = r.Land_Acre,
+                    LandRood      = r.Land_Rood,
+                    LandPerch     = r.Land_Perch
                 })
                 .ToListAsync();
 
@@ -159,7 +162,10 @@ namespace TeaFactorySupplierManagement.Application.Services
                         RegNo = r.RegNo.ToString(),
                         Route = r.Route ?? string.Empty,
                         BankName = r.BankName,
-                        AccountNumber = r.AccCode
+                        AccountNumber = r.AccCode,
+                        LandAcre = r.Land_Acre,
+                        LandRood = r.Land_Rood,
+                        LandPerch = r.Land_Perch
                     })
                     .ToListAsync();
             }
@@ -271,6 +277,23 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             login.PinHash = BCrypt.Net.BCrypt.HashPassword(newPin);
             login.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateLandInfoAsync(int regNo, LandInfoDto request)
+        {
+            var supplier = await _context.RegSuppliers
+                .FirstOrDefaultAsync(r => r.RegNo == regNo);
+
+            if (supplier == null)
+                return false;
+
+            supplier.Land_Acre = request.LandAcre;
+            supplier.Land_Rood = request.LandRood;
+            supplier.Land_Perch = request.LandPerch;
+            supplier.Edit_Date = DateTime.Now;
+
             await _context.SaveChangesAsync();
             return true;
         }

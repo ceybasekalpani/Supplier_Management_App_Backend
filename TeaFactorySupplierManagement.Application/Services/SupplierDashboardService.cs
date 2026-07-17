@@ -49,6 +49,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                     Phone2 = s.TelNo_2,
                     Phone3 = s.TelNo_3,
                     Address = s.Address ?? string.Empty,
+                    LandAcre = s.Land_Acre,
+                    LandRood = s.Land_Rood,
+                    LandPerch = s.Land_Perch,
                     Bank = s.BankName ?? s.Bank ?? s.CustBank ?? string.Empty,
                     Branch = s.BranchCode ?? string.Empty,
                     Payment = s.PayMode ?? s.PayMode_Temp ?? string.Empty,
@@ -85,6 +88,9 @@ namespace TeaFactorySupplierManagement.Application.Services
                     Phone2 = s.TelNo_2,
                     Phone3 = s.TelNo_3,
                     Address = s.Address ?? string.Empty,
+                    LandAcre = s.Land_Acre,
+                    LandRood = s.Land_Rood,
+                    LandPerch = s.Land_Perch,
                     Bank = s.BankName ?? s.Bank ?? s.CustBank ?? string.Empty,
                     Branch = s.BranchCode ?? string.Empty,
                     Payment = s.PayMode ?? s.PayMode_Temp ?? string.Empty,
@@ -221,4 +227,3 @@ namespace TeaFactorySupplierManagement.Application.Services
         }
     }
 }
-

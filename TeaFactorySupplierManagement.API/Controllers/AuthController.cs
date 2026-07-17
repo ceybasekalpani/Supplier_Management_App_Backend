@@ -58,6 +58,9 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 phone2 = supplier.TelNo_2,
                 phone3 = supplier.TelNo_3,
                 address = supplier.Address,
+                landAcre = supplier.Land_Acre,
+                landRood = supplier.Land_Rood,
+                landPerch = supplier.Land_Perch,
                 idNo = supplier.IDNo,
                 profileImage = settings?.ProfileImage,
                 settings
@@ -140,6 +143,21 @@ namespace TeaFactorySupplierManagement.API.Controllers
                 return BadRequest(new { message = "Current PIN is incorrect" });
 
             return Ok(new { message = "PIN changed successfully" });
+        }
+
+        [Authorize]
+        [HttpPut("land-info")]
+        public async Task<IActionResult> UpdateLandInfo([FromBody] LandInfoDto request)
+        {
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int regNo))
+                return Unauthorized();
+
+            var result = await _authService.UpdateLandInfoAsync(regNo, request);
+            if (!result)
+                return NotFound(new { message = "Supplier not found" });
+
+            return Ok(new { message = "Land info updated successfully" });
         }
 
         [HttpPost("pin-login")]
