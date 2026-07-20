@@ -68,9 +68,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Database
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(
+        configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null));
 
     if (builder.Environment.IsDevelopment())
     {

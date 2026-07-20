@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -28,51 +29,24 @@ namespace TeaFactorySupplierManagement.Application.Services
 
         public async Task<LoginResponseDto?> LoginAsync(string username, string password)
         {
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+                return null;
+
             var user = username.Trim();
             var pass = password.Trim();
             int.TryParse(user, out int regNoInt);
 
-            if (regNoInt > 0 && pass == regNoInt.ToString())
-            {
-                var existingLogin = await _context.SupplierLogins
-                    .Include(l => l.Supplier)
-                    .FirstOrDefaultAsync(l => l.RegNo == regNoInt);
-
-                if (existingLogin != null)
-                {
-                    existingLogin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass);
-                    existingLogin.UpdatedAt    = DateTime.Now;
-                    existingLogin.IsActive     = true;
-                    await _context.SaveChangesAsync();
-                    return await BuildResponse(existingLogin);
-                }
-
-                var supplier = await _context.RegSuppliers
-                    .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
-
-                if (supplier == null)
-                    return null; 
-
-                var newLogin = new SupplierLogin
-                {
-                    RegNo        = regNoInt,
-                    Username     = regNoInt.ToString(),
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass),
-                    IsActive     = true,
-                    IsCreatePin  = false, 
-                    Supplier     = supplier,
-                };
-                _context.SupplierLogins.Add(newLogin);
-                await _context.SaveChangesAsync();
-                return await BuildResponse(newLogin);
-            }
-
             SupplierLogin? login = null;
 
             if (regNoInt > 0)
+            {
                 login = await _context.SupplierLogins
                     .Include(l => l.Supplier)
                     .FirstOrDefaultAsync(l => l.RegNo == regNoInt && l.IsActive);
+
+                if (login == null && pass == regNoInt.ToString())
+                    login = await CreateDefaultLoginIfMissingAsync(regNoInt, pass);
+            }
 
             if (login == null)
                 login = await _context.SupplierLogins
@@ -107,9 +81,51 @@ namespace TeaFactorySupplierManagement.Application.Services
             return await BuildResponse(login);
         }
 
+        private async Task<SupplierLogin?> CreateDefaultLoginIfMissingAsync(int regNo, string password)
+        {
+            var supplier = await _context.RegSuppliers
+                .FirstOrDefaultAsync(r => r.RegNo == regNo);
+
+            if (supplier == null)
+                return null;
+
+            var newLogin = new SupplierLogin
+            {
+                RegNo = regNo,
+                Username = regNo.ToString(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                IsActive = true,
+                IsCreatePin = false,
+                Supplier = supplier,
+            };
+
+            _context.SupplierLogins.Add(newLogin);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return newLogin;
+            }
+            catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+            {
+                _context.Entry(newLogin).State = EntityState.Detached;
+
+                return await _context.SupplierLogins
+                    .Include(l => l.Supplier)
+                    .FirstOrDefaultAsync(l => l.RegNo == regNo && l.IsActive);
+            }
+        }
+
+        private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+        {
+            return ex.GetBaseException() is SqlException sqlException &&
+                   sqlException.Errors.Cast<SqlError>().Any(error => error.Number is 2601 or 2627);
+        }
+
         private async Task<LoginResponseDto> BuildResponse(SupplierLogin login)
         {
             var registrations = await _context.RegSuppliers
+                .AsNoTracking()
                 .Where(r => r.RegNo == login.RegNo && (r.Active == true || r.Active == null))
                 .Select(r => new RegistrationDto
                 {
@@ -124,6 +140,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                 .ToListAsync();
 
             var settings = await _context.UserSettings
+                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.RegNo == login.RegNo);
 
             var token = GenerateJwtToken(login);
@@ -146,6 +163,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (int.TryParse(regNo, out int regNoInt))
             {
                 return await _context.RegSuppliers
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
             }
             return null;
@@ -156,6 +174,7 @@ namespace TeaFactorySupplierManagement.Application.Services
             if (int.TryParse(supplierId, out int regNoInt))
             {
                 return await _context.RegSuppliers
+                    .AsNoTracking()
                     .Where(r => r.RegNo == regNoInt && (r.Active == true || r.Active == null))
                     .Select(r => new RegistrationDto
                     {
