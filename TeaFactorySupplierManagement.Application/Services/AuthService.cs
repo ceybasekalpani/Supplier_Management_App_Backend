@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using TeaFactorySupplierManagement.Application.DTOs.Auth;
 using TeaFactorySupplierManagement.Application.DTOs.Settings;
@@ -63,7 +64,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             if (isPlainText)
             {
-                passwordValid = login.PasswordHash == pass;
+                passwordValid = FixedTimeEquals(login.PasswordHash, pass);
                 if (passwordValid)
                 {
                     login.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pass);
@@ -120,6 +121,19 @@ namespace TeaFactorySupplierManagement.Application.Services
         {
             return ex.GetBaseException() is SqlException sqlException &&
                    sqlException.Errors.Cast<SqlError>().Any(error => error.Number is 2601 or 2627);
+        }
+
+        // Constant-time comparison so legacy plaintext-password checks don't leak
+        // timing information character-by-character, unlike a plain `==` compare.
+        private static bool FixedTimeEquals(string a, string b)
+        {
+            var aBytes = Encoding.UTF8.GetBytes(a);
+            var bBytes = Encoding.UTF8.GetBytes(b);
+
+            if (aBytes.Length != bBytes.Length)
+                return false;
+
+            return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
         }
 
         private async Task<LoginResponseDto> BuildResponse(SupplierLogin login)
@@ -191,15 +205,20 @@ namespace TeaFactorySupplierManagement.Application.Services
             return new List<RegistrationDto>();
         }
 
-        public async Task<bool> SelectRegistrationAsync(string regNo)
+        public async Task<bool> SelectRegistrationAsync(int callerRegNo, string requestedRegNo)
         {
-            if (int.TryParse(regNo, out int regNoInt))
-            {
-                var registration = await _context.RegSuppliers
-                    .FirstOrDefaultAsync(r => r.RegNo == regNoInt);
-                return registration != null;
-            }
-            return false;
+            if (!int.TryParse(requestedRegNo, out int requestedRegNoInt))
+                return false;
+
+            // Only allow selecting a registration that actually belongs to the
+            // authenticated caller — prevents selecting an arbitrary supplier's RegNo.
+            if (requestedRegNoInt != callerRegNo)
+                return false;
+
+            var registration = await _context.RegSuppliers
+                .FirstOrDefaultAsync(r => r.RegNo == requestedRegNoInt && (r.Active == true || r.Active == null));
+
+            return registration != null;
         }
 
         public async Task<bool> ChangePasswordAsync(int regNo, string currentPassword, string newPassword)
@@ -215,7 +234,7 @@ namespace TeaFactorySupplierManagement.Application.Services
                                !login.PasswordHash.StartsWith("$2y$");
 
             bool currentValid = isPlainText
-                ? login.PasswordHash == currentPassword
+                ? FixedTimeEquals(login.PasswordHash, currentPassword)
                 : BCrypt.Net.BCrypt.Verify(currentPassword, login.PasswordHash);
 
             if (!currentValid)
@@ -237,6 +256,12 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             var existing = await _context.SupplierLogins
                 .FirstOrDefaultAsync(l => l.RegNo == regNo);
+
+            // An active login already exists for this RegNo — refuse to overwrite it.
+            // Without this check, anyone who knows a RegNo could silently take over
+            // an existing supplier's account via this unauthenticated endpoint.
+            if (existing != null && existing.IsActive)
+                return false;
 
             if (existing != null)
                 _context.SupplierLogins.Remove(existing);
@@ -320,7 +345,11 @@ namespace TeaFactorySupplierManagement.Application.Services
         public string GenerateJwtToken(SupplierLogin login)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? "default-secret-key-for-development-only-32chars!");
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(jwtKey))
+                throw new InvalidOperationException("JWT Key is not configured.");
+
+            var key = Encoding.ASCII.GetBytes(jwtKey);
 
             var claims = new List<Claim>
             {

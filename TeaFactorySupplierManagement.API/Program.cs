@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using TeaFactorySupplierManagement.API.Services;
 using TeaFactorySupplierManagement.Application.Interfaces;
 using TeaFactorySupplierManagement.Application.Services;
@@ -232,6 +234,22 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 builder.Services.AddResponseCaching();
 
+// Rate limiting for auth endpoints susceptible to brute-forcing (login, PIN login, etc.)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
 var app = builder.Build();
 
 // HTTP pipeline
@@ -257,6 +275,7 @@ app.UseCors("AllowReactApp");
 // IMPORTANT:
 // Do not use custom JwtMiddleware here.
 // ASP.NET Core JwtBearer already handles expired tokens and authorization.
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

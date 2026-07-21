@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TeaFactorySupplierManagement.Application.DTOs.Auth;
 using TeaFactorySupplierManagement.Application.Interfaces;
 
@@ -18,6 +19,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
             _settingsService = settingsService;
         }
 
+        [EnableRateLimiting("auth")]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
@@ -83,7 +85,11 @@ namespace TeaFactorySupplierManagement.API.Controllers
         [HttpPost("select-registration")]
         public async Task<IActionResult> SelectRegistration([FromBody] SelectRegistrationRequest request)
         {
-            var result = await _authService.SelectRegistrationAsync(request.RegNo);
+            var regNoClaim = User.FindFirst("RegNo")?.Value;
+            if (string.IsNullOrEmpty(regNoClaim) || !int.TryParse(regNoClaim, out int callerRegNo))
+                return Unauthorized();
+
+            var result = await _authService.SelectRegistrationAsync(callerRegNo, request.RegNo);
 
             if (!result)
                 return BadRequest(new { message = "Invalid registration number" });
@@ -92,6 +98,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
         }
 
         [Authorize]
+        [EnableRateLimiting("auth")]
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
         {
@@ -127,6 +134,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
 
         // NEW ENDPOINT
         [Authorize]
+        [EnableRateLimiting("auth")]
         [HttpPost("change-pin")]
         public async Task<IActionResult> ChangePin([FromBody] ChangePinDto request)
         {
@@ -160,6 +168,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(new { message = "Land info updated successfully" });
         }
 
+        [EnableRateLimiting("auth")]
         [HttpPost("pin-login")]
         public async Task<IActionResult> PinLogin([FromBody] PinLoginRequestDto request)
         {
@@ -173,6 +182,7 @@ namespace TeaFactorySupplierManagement.API.Controllers
             return Ok(result);
         }
 
+        [EnableRateLimiting("auth")]
         [HttpPost("create-login")]
         public async Task<IActionResult> CreateSupplierLogin([FromBody] CreateSupplierLoginDto request)
         {
