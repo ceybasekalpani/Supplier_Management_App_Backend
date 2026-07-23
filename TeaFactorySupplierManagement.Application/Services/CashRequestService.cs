@@ -134,9 +134,7 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             var (activeMonth, nextMonth, cutoffDay) = DeriveSalaryPeriod(salaryDate);
 
-            // The advance rates in Reg_Settings are only valid for the period they were configured
-            // for. Refuse to apply them to a different salary period rather than silently using
-            // stale rates.
+           
             if (settings.ActiveMonth != activeMonth || settings.NextMonth != nextMonth)
                 return null;
 
@@ -156,14 +154,10 @@ namespace TeaFactorySupplierManagement.Application.Services
 
             var (activeMonth, nextMonth, cutoffDay) = DeriveSalaryPeriod(salaryDate);
 
-            // The advance rates in Reg_Settings are only valid for the period they were configured
-            // for. Refuse to apply them to a different salary period rather than silently using
-            // stale rates.
+         
             if (settings.ActiveMonth != activeMonth || settings.NextMonth != nextMonth)
                 return new List<SupplierAdvanceLimitDto>();
 
-            // Join to Reg_Supplier to restrict each collection row to the supplier's own route
-            // (a RegNo can otherwise appear against more than one route in Tr_LeafCollection).
             var rows = await (
                 from l in _context.TrLeafCollections
                 join s in _context.RegSuppliers on l.RegNo equals s.RegNo
