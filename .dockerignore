@@ -1,0 +1,11 @@
+.git
+.vs
+.codex-logs
+.agents
+**/bin
+**/obj
+*.user
+appsettings.Development.json
+firebase-service-account.json
+TeaFactorySupplierManagement.API/DataProtectionKeys
+*.log
