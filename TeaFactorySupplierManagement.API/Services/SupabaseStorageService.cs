@@ -172,16 +172,29 @@ namespace TeaFactorySupplierManagement.API.Services
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
 
-            var response = await client.GetAsync(downloadUrl);
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                _logger.LogWarning("Supabase image download failed: {Status} for {Url}", response.StatusCode, downloadUrl);
+                using var response = await client.GetAsync(downloadUrl);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Supabase image download failed: {Status} for {Url}", response.StatusCode, downloadUrl);
+                    return (null, "image/jpeg");
+                }
+
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                return (new MemoryStream(bytes), contentType);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Supabase profile image could not be downloaded. Check Supabase:Url and network/DNS connectivity.");
                 return (null, "image/jpeg");
             }
-
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
-            var stream = await response.Content.ReadAsStreamAsync();
-            return (stream, contentType);
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogWarning(ex, "Supabase profile image download timed out.");
+                return (null, "image/jpeg");
+            }
         }
 
         public async Task DeleteProfileImageAsync(string fileUrl)
