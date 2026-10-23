@@ -209,16 +209,20 @@ builder.Services.AddScoped<ISupabaseStorageService, SupabaseStorageService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // CORS
-var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? new[]
-    {
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:8081",
-        "http://localhost:19006",
-        "http://localhost:19000"
-    };
+// Keep local origins in appsettings.json and provide the deployed frontend
+// origin through the FRONTEND_URL environment variable on Render.
+var configuredOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
+
+var frontendUrl = configuration["FRONTEND_URL"]
+    ?? configuration["FrontendUrl"];
+
+var allowedOrigins = configuredOrigins
+    .Append(frontendUrl ?? string.Empty)
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin.Trim().TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
 
 builder.Services.AddCors(options =>
 {
@@ -265,7 +269,6 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseHsts();
-    app.UseHttpsRedirection();
 }
 
 app.UseStaticFiles();
@@ -288,11 +291,21 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var runMigrations = configuration.GetValue("Database:RunMigrations", true);
 
-        await dbContext.Database.MigrateAsync();
+        if (runMigrations)
+        {
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied successfully");
+        }
+        else
+        {
+            logger.LogWarning("Database migrations are disabled by Database:RunMigrations");
+        }
+
         await DbInitializer.InitializeAsync(dbContext);
 
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Database initialized successfully");
     }
     catch (Exception ex)
