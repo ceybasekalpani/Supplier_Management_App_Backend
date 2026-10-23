@@ -219,6 +219,7 @@ var frontendUrl = configuration["FRONTEND_URL"]
 
 var allowedOrigins = configuredOrigins
     .Append(frontendUrl ?? string.Empty)
+    .Append("https://supplierappdashboard.vercel.app")
     .Where(origin => !string.IsNullOrWhiteSpace(origin))
     .Select(origin => origin.Trim().TrimEnd('/'))
     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -271,9 +272,9 @@ else
     app.UseHsts();
 }
 
+app.UseCors("AllowReactApp");
 app.UseStaticFiles();
 app.UseResponseCaching();
-app.UseCors("AllowReactApp");
 
 // IMPORTANT:
 // Do not use custom JwtMiddleware here.
