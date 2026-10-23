@@ -72,12 +72,11 @@ builder.Services.AddSwaggerGen(c =>
 // Database
 builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(
-        configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions => sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(5),
-            errorNumbersToAdd: null));
+    // Manual transactions are used by the disbursement and delivery-note
+    // services. Do not enable SqlServerRetryingExecutionStrategy here because
+    // it does not support user-initiated transactions unless the entire
+    // transaction is wrapped in CreateExecutionStrategy().ExecuteAsync(...).
+    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
 
     if (builder.Environment.IsDevelopment())
     {
